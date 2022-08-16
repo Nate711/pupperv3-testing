@@ -13,7 +13,9 @@ find_package(std_msgs REQUIRED)
 add_executable(talker src/publisher_member_function.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 
-add_executable(can_test src/motor_interface.cpp)
+add_library(motor_interface src/motor_interface.cpp)
+add_executable(can_test src/can_test.cpp)
+target_link_libraries(can_test motor_interface)
 
 install(TARGETS
 	talker
