@@ -14,6 +14,7 @@
 #include <chrono>
 #include <mutex>
 #include <thread>
+#include <atomic>
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -24,12 +25,23 @@
 
 using namespace std;
 
+const int kServosPerChannel = 3;
+const int kNumCANChannels = 4;
+
 enum class CANChannel
 {
     CAN0 = 0,
     CAN1 = 1,
     CAN2 = 2,
     CAN3 = 3,
+};
+
+const vector<CANChannel> kAllCANChannels = {CANChannel::CAN0, CANChannel::CAN1, CANChannel::CAN2, CANChannel::CAN3};
+
+struct MotorData
+{
+    uint8_t motor_id = 0;
+    float multi_angle = 0;
 };
 
 class MotorInterface
@@ -41,14 +53,15 @@ public:
     void close_canbuses();
     void initialize_motors();
     void request_multi_angle(CANChannel bus, uint32_t motor_id);
-    float read_multi_angle(CANChannel bus);
-    void start_read_thread();
+    MotorData read_multi_angle(CANChannel bus);
+    void start_read_threads();
 
 private:
     void initialize_bus(CANChannel bus);
     void initialize_motor(CANChannel bus, uint32_t motor_id);
     uint32_t can_id(uint32_t motor_id);
-    void read_multi_angle_thread();
+    uint32_t motor_id(uint32_t can_id);
+    void read_multi_angle_thread(CANChannel channel);
     void send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload);
 
     unordered_map<CANChannel, string> kChannelLookup = {{CANChannel::CAN0, "can0"}, {CANChannel::CAN1, "can1"}};
@@ -56,6 +69,8 @@ private:
     unordered_map<CANChannel, vector<uint32_t>> motor_connections_;
     const int bitrate_;
     bool initialized_;
+    atomic<bool> should_read_;
+
     const uint8_t kStartup0 = 0x76;
     const uint8_t kStartup1 = 0x88;
     const uint8_t kStartup2 = 0x77;
@@ -63,7 +78,11 @@ private:
     const float kDegsPerTick = 0.01;
     const float kSpeedReduction = 0.1;
 
-    float latest_multi_angle_;
-    unique_ptr<std::thread> read_multi_angle_thread_;
-    std::mutex latest_multi_angle_mutex_;
+    // float latest_multi_angle_;
+    array<array<float, kServosPerChannel>, kNumCANChannels> latest_multi_angles_;
+    array<unique_ptr<std::thread>, kNumCANChannels> read_multi_angle_threads_;
+    mutex latest_multi_angle_mutex_;
+
+    // DEBUG ONLY
+    std::chrono::system_clock::time_point debug_start_;
 };

@@ -1,4 +1,5 @@
 #include "motor_interface.hpp"
+#include "prof_utils.hpp"
 
 // TODO: figure out how to catch control-c and close sockets without this global
 unique_ptr<MotorInterface> motor_interface;
@@ -15,25 +16,36 @@ int main()
     signal(SIGINT, sigint_handler);
 
     // TODO: Replace with make_unique after resolving argument list error
-    motor_interface = unique_ptr<MotorInterface>(new MotorInterface({{CANChannel::CAN0, {1}}}, /*bitrate=*/1000000));
+    motor_interface = unique_ptr<MotorInterface>(new MotorInterface({{CANChannel::CAN0, {1, 2, 3}}, {CANChannel::CAN1, {1, 2, 3}}}, /*bitrate=*/1000000));
     motor_interface->initialize_canbuses();
-    motor_interface->initialize_motors();
+    motor_interface->initialize_motors(); // not needed if you just want angles
+    motor_interface->start_read_threads();
 
-    motor_interface->start_read_thread();
-
-    auto loop_start = chrono::high_resolution_clock::now();
+    auto loop_start = time_now();
     while (true)
     {
-        auto loop_now = chrono::high_resolution_clock::now();
+        // Print time since start of program
+        auto loop_now = time_now();
         auto since_start = chrono::duration_cast<chrono::microseconds>(loop_now - loop_start);
-        cout << since_start.count() << "\t";
+        cout << endl
+             << "\nSince start (us): " << since_start.count() << "\t";
 
-        auto start = chrono::high_resolution_clock::now();
+        // Print time took to send angle request
+        auto start = time_now();
         motor_interface->request_multi_angle(CANChannel::CAN0, 1);
-        auto stop = chrono::high_resolution_clock::now();
-        auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
-        // cout << "angle: " << angle << endl;
-        cout << duration.count() << endl;
+        motor_interface->request_multi_angle(CANChannel::CAN0, 2);
+        motor_interface->request_multi_angle(CANChannel::CAN0, 3);
+        motor_interface->request_multi_angle(CANChannel::CAN1, 1);
+        motor_interface->request_multi_angle(CANChannel::CAN1, 2);
+        motor_interface->request_multi_angle(CANChannel::CAN1, 3);
+        auto stop = time_now();
+        // cout << "Angle request (ns): " << duration_ns(stop - start) << "\t"; // takes 80us with large variance
+
+        // float angle = motor_interface->read_multi_angle(CANChannel::CAN0);
+        // cout << "Multi-angle (deg): " << angle << "\t";
+
+        // usleep(500-220);
+        usleep(2000); // sending to 3 motors takes 2500us
     }
     return 0;
 }

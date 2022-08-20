@@ -6,7 +6,6 @@
 #include <string>
 #include <cstring>
 #include <array>
-// #include <map>
 #include <unordered_map>
 #include <signal.h>
 #include <memory>
@@ -22,17 +21,23 @@
 #include <linux/can/raw.h>
 
 #include "motor_interface.hpp"
+#include "prof_utils.hpp"
 
 using namespace std;
 
 MotorInterface::MotorInterface(unordered_map<CANChannel, vector<uint32_t>> motor_connections, int bitrate) : motor_connections_(motor_connections),
                                                                                                              bitrate_(bitrate),
-                                                                                                             initialized_(false)
+                                                                                                             initialized_(false),
+                                                                                                             should_read_(true)
 {
+    // DEBUG ONLY
+    debug_start_ = time_now();
+    canbus_to_fd_.fill(-1);
 }
 
 MotorInterface::~MotorInterface()
 {
+    should_read_ = false;
     close_canbuses();
 }
 
@@ -67,23 +72,30 @@ void MotorInterface::initialize_motors()
 
 void MotorInterface::request_multi_angle(CANChannel bus, uint32_t motor_id)
 {
-    auto start = chrono::high_resolution_clock::now();
+    auto start = time_now();
     send(bus, motor_id, {kGetMultiAngle, 0, 0, 0, 0, 0, 0, 0});
-    auto stop = chrono::high_resolution_clock::now();
-    cout << chrono::duration_cast<chrono::nanoseconds>(stop - start).count() << "\t";
+    auto stop = time_now();
+    // cout << "Send (ns): " << duration_ns(stop - start) << "\t"; // Send takes roughly 81us
 }
 
-float MotorInterface::read_multi_angle(CANChannel bus)
+MotorData MotorInterface::read_multi_angle(CANChannel bus)
 {
+    struct MotorData motor_data;
     struct can_frame frame;
     memset(&frame, 0, sizeof(frame));
-    auto start = chrono::high_resolution_clock::now();
-    int fd = canbus_to_fd_.at(static_cast<int>(bus));
-    auto stop = chrono::high_resolution_clock::now();
-    cout << chrono::duration_cast<chrono::nanoseconds>(stop - start).count() << "\t";
 
-    start = chrono::high_resolution_clock::now();
+    // Print time to get fd
+    auto start = time_now();
+    int fd = canbus_to_fd_.at(static_cast<int>(bus));
+    auto stop = time_now();
+    // cout << "FD lookup (ns): " << duration_ns(stop - start) << "\t";
+
+    // Print time to read from can bus
+    auto start_read = time_now();
     int nbytes = read(fd, &frame, sizeof(struct can_frame));
+    auto stop_read = time_now();
+    // cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
+    // cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
     if (nbytes < 0)
     {
         cerr << "ERROR: can raw socket read";
@@ -92,22 +104,32 @@ float MotorInterface::read_multi_angle(CANChannel bus)
     {
         cerr << "ERROR: did not read full can frame";
     }
-    stop = chrono::high_resolution_clock::now();
-    cout << chrono::duration_cast<chrono::nanoseconds>(stop - start).count() << "\t";
+    stop = time_now();
+    // cout << "CAN read (ns): " << duration_ns(stop - start_read) << "\t";
 
-    start = chrono::high_resolution_clock::now();
-    // cout << "frame data: " << frame.data << endl;
-    int64_t multi_loop_angle;
-    memcpy(&multi_loop_angle, frame.data + 1, 7);
-    stop = chrono::high_resolution_clock::now();
-    cout << chrono::duration_cast<chrono::nanoseconds>(stop - start).count() << "\t";
+    // Print time to copy data into angle
+    start = time_now();
+    uint8_t command_id = frame.data[0];
+    int64_t multi_loop_angle = 0;
+    memcpy(&multi_loop_angle, frame.data, 8);
+    multi_loop_angle &= 0xFFFFFFFFFFFFFF00;
+    multi_loop_angle = multi_loop_angle >> 8;
+    stop = time_now();
+    // cout << "Frame parse (ns): " << duration_ns(stop - start) << "\t";
 
-    return multi_loop_angle * kDegsPerTick * kSpeedReduction;
+    motor_data.multi_angle = multi_loop_angle * kDegsPerTick * kSpeedReduction;
+    motor_data.motor_id = motor_id(frame.can_id);
 }
 
-void MotorInterface::start_read_thread()
+void MotorInterface::start_read_threads()
 {
-    read_multi_angle_thread_ = make_unique<thread>(&MotorInterface::read_multi_angle_thread, this);
+    for (auto canbus : kAllCANChannels)
+    {
+        if (canbus_to_fd_.at(static_cast<int>(canbus)) != -1)
+        {
+            read_multi_angle_threads_.at(static_cast<int>(canbus)) = make_unique<thread>(&MotorInterface::read_multi_angle_thread, this, canbus);
+        }
+    }
 }
 
 void MotorInterface::initialize_bus(CANChannel bus)
@@ -149,16 +171,21 @@ uint32_t MotorInterface::can_id(uint32_t motor_id)
     return 0x140 + motor_id;
 }
 
-void MotorInterface::read_multi_angle_thread()
+uint32_t MotorInterface::motor_id(uint32_t can_id)
 {
-    while (true)
+    return can_id - 0x140;
+}
+
+void MotorInterface::read_multi_angle_thread(CANChannel channel)
+{
+    while (should_read_)
     {
-        float angle = read_multi_angle(CANChannel::CAN0);
+        MotorData motor_data = read_multi_angle(channel);
         {
             unique_lock<mutex> lock(latest_multi_angle_mutex_);
-            latest_multi_angle_ = angle;
+            latest_multi_angles_.at(static_cast<int>(channel)).at(motor_data.motor_id - 1) = motor_data.multi_angle;
         }
-        cout << "got angle: " << angle << endl;
+        cout << "Multi-angle (deg): " << motor_data.multi_angle << "\t";
     }
 }
 
@@ -169,9 +196,14 @@ void MotorInterface::send(CANChannel bus, uint32_t motor_id, const array<uint8_t
     memset(&frame, 0, sizeof(frame));
     frame.can_id = can_id(motor_id);
     frame.len = 8;
-    copy(payload.begin(), payload.end(), frame.data);
+    memcpy(frame.data, payload.data(), 8);
+    auto start = time_now();
     if (write(file_descriptor, &frame, CAN_MTU) != CAN_MTU)
     {
         cerr << "Error writing can frame";
     }
+    auto stop = time_now();
+    // cout << "write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
+    // cout << "Send start (ms): " << duration_ms(start - debug_start_) << "\t";
+    // cout << "Send end (ms): " << duration_ms(stop - debug_start_) << "\t";
 }
