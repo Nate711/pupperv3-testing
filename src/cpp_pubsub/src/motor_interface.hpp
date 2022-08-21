@@ -55,14 +55,16 @@ public:
     void request_multi_angle(CANChannel bus, uint32_t motor_id);
     MotorData read_multi_angle(CANChannel bus);
     void start_read_threads();
+    array<unordered_map<int, MotorData>, kNumCANChannels> latest_data();
 
 private:
     void initialize_bus(CANChannel bus);
     void initialize_motor(CANChannel bus, uint32_t motor_id);
     uint32_t can_id(uint32_t motor_id);
     uint32_t motor_id(uint32_t can_id);
-    void read_multi_angle_thread(CANChannel channel);
+    void read_thread(CANChannel channel);
     void send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload);
+    void initialize_map();
 
     unordered_map<CANChannel, string> kChannelLookup = {{CANChannel::CAN0, "can0"}, {CANChannel::CAN1, "can1"}};
     array<int, 4> canbus_to_fd_;
@@ -79,10 +81,10 @@ private:
     const float kSpeedReduction = 0.1;
 
     // float latest_multi_angle_;
-    array<array<float, kServosPerChannel>, kNumCANChannels> latest_multi_angles_;
-    array<unique_ptr<std::thread>, kNumCANChannels> read_multi_angle_threads_;
-    mutex latest_multi_angle_mutex_;
+    array<unordered_map<int, MotorData>, kNumCANChannels> latest_data_;
+    array<thread, kNumCANChannels> read_threads_;
+    mutex latest_data_lock_;
 
     // DEBUG ONLY
-    std::chrono::system_clock::time_point debug_start_;
+    chrono::system_clock::time_point debug_start_;
 };

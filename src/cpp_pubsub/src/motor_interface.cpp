@@ -33,12 +33,28 @@ MotorInterface::MotorInterface(unordered_map<CANChannel, vector<uint32_t>> motor
     // DEBUG ONLY
     debug_start_ = time_now();
     canbus_to_fd_.fill(-1);
+    initialize_map();
 }
 
 MotorInterface::~MotorInterface()
 {
     should_read_ = false;
+    for (thread &active_thread : read_threads_)
+    {
+        active_thread.join();
+    }
     close_canbuses();
+}
+
+void MotorInterface::initialize_map()
+{
+    for (const auto &[bus, motor_id_list] : motor_connections_)
+    {
+        for (const auto &motor_id : motor_id_list)
+        {
+            latest_data_.at(static_cast<int>(bus)).insert({motor_id, MotorData{.motor_id = motor_id}});
+        }
+    }
 }
 
 void MotorInterface::initialize_canbuses()
@@ -68,6 +84,14 @@ void MotorInterface::initialize_motors()
         }
     }
     initialized_ = true;
+}
+
+array<unordered_map<int, MotorData>, kNumCANChannels> MotorInterface::latest_data()
+{
+    {
+        unique_lock<mutex> lock(latest_data_lock_);
+        return latest_data_;
+    }
 }
 
 void MotorInterface::request_multi_angle(CANChannel bus, uint32_t motor_id)
@@ -119,6 +143,7 @@ MotorData MotorInterface::read_multi_angle(CANChannel bus)
 
     motor_data.multi_angle = multi_loop_angle * kDegsPerTick * kSpeedReduction;
     motor_data.motor_id = motor_id(frame.can_id);
+    return motor_data;
 }
 
 void MotorInterface::start_read_threads()
@@ -127,7 +152,7 @@ void MotorInterface::start_read_threads()
     {
         if (canbus_to_fd_.at(static_cast<int>(canbus)) != -1)
         {
-            read_multi_angle_threads_.at(static_cast<int>(canbus)) = make_unique<thread>(&MotorInterface::read_multi_angle_thread, this, canbus);
+            read_threads_.at(static_cast<int>(canbus)) = thread(&MotorInterface::read_thread, this, canbus);
         }
     }
 }
@@ -176,16 +201,17 @@ uint32_t MotorInterface::motor_id(uint32_t can_id)
     return can_id - 0x140;
 }
 
-void MotorInterface::read_multi_angle_thread(CANChannel channel)
+void MotorInterface::read_thread(CANChannel channel)
 {
     while (should_read_)
     {
         MotorData motor_data = read_multi_angle(channel);
         {
-            unique_lock<mutex> lock(latest_multi_angle_mutex_);
-            latest_multi_angles_.at(static_cast<int>(channel)).at(motor_data.motor_id - 1) = motor_data.multi_angle;
+            unique_lock<mutex> lock(latest_data_lock_);
+            // TODO: think about how to copy data from can. Only copy new data
+            // cout << "Motor data: " << (int)motor_data.motor_id << "\t" << motor_data.multi_angle << "\t";
+            latest_data_.at(static_cast<int>(channel)).at(motor_data.motor_id).multi_angle = motor_data.multi_angle;
         }
-        cout << "Multi-angle (deg): " << motor_data.multi_angle << "\t";
     }
 }
 

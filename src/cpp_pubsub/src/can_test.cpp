@@ -20,6 +20,7 @@ int main()
     motor_interface->initialize_canbuses();
     motor_interface->initialize_motors(); // not needed if you just want angles
     motor_interface->start_read_threads();
+    cout << "Initialized canbuses, motors, threads" << endl;
 
     auto loop_start = time_now();
     while (true)
@@ -40,6 +41,18 @@ int main()
         motor_interface->request_multi_angle(CANChannel::CAN1, 3);
         auto stop = time_now();
         // cout << "Angle request (ns): " << duration_ns(stop - start) << "\t"; // takes 80us with large variance
+
+        auto retrieve_start = time_now();
+        cout << "Angles (deg): " << "\t";
+        auto latest_data = motor_interface->latest_data();
+        cout << latest_data.at(0).at(1).multi_angle << "\t";
+        cout << latest_data.at(0).at(2).multi_angle << "\t";
+        cout << latest_data.at(0).at(3).multi_angle << "\t";
+        cout << latest_data.at(1).at(1).multi_angle << "\t";
+        cout << latest_data.at(1).at(2).multi_angle << "\t";
+        cout << latest_data.at(1).at(3).multi_angle << "\t";
+        auto retrieve_end = time_now();
+        cout << "Retrival time (ns): " << duration_ns(retrieve_end - retrieve_start) << "\t"; // 30us to 300us
 
         // float angle = motor_interface->read_multi_angle(CANChannel::CAN0);
         // cout << "Multi-angle (deg): " << angle << "\t";
