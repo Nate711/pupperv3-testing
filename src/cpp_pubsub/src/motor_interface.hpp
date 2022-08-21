@@ -40,6 +40,7 @@ const vector<CANChannel> kAllCANChannels = {CANChannel::CAN0, CANChannel::CAN1, 
 
 struct MotorData
 {
+    uint8_t error = 0;
     uint8_t motor_id = 0;
     float multi_angle = 0;
 };
@@ -79,6 +80,8 @@ private:
     const uint8_t kGetMultiAngle = 0x92;
     const float kDegsPerTick = 0.01;
     const float kSpeedReduction = 0.1;
+
+    const int kTimeoutSeconds = 1;
 
     // float latest_multi_angle_;
     array<unordered_map<int, MotorData>, kNumCANChannels> latest_data_;

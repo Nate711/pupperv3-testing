@@ -38,11 +38,15 @@ MotorInterface::MotorInterface(unordered_map<CANChannel, vector<uint32_t>> motor
 
 MotorInterface::~MotorInterface()
 {
-    should_read_ = false;
-    for (thread &active_thread : read_threads_)
-    {
-        active_thread.join();
-    }
+    cout << "Calling motor interface destructor." << endl;
+    should_read_.store(false);
+    // Causes lots of can socket exceptions / errors
+    // for (thread &active_thread : read_threads_)
+    // {
+    //     cout << "Joining thread. ";
+    //     active_thread.join();
+    // }
+    cout << "Closing can buses" << endl;
     close_canbuses();
 }
 
@@ -121,7 +125,13 @@ MotorData MotorInterface::read_multi_angle(CANChannel bus)
     // cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
     // cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
     if (nbytes < 0)
-    {
+    {   
+        // Continue on read timeouts
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            cout << "Bus " << static_cast<int>(bus) << " timed out on read" << endl;
+            return MotorData{.error=1};
+        }
         cerr << "ERROR: can raw socket read";
     }
     if (nbytes != sizeof(struct can_frame))
@@ -166,6 +176,8 @@ void MotorInterface::initialize_bus(CANChannel bus)
     {
         cerr << "socket";
     }
+
+    // find interface index
     strcpy(ifr.ifr_name, kChannelLookup[bus].c_str());
     ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
     if (!ifr.ifr_ifindex)
@@ -177,11 +189,18 @@ void MotorInterface::initialize_bus(CANChannel bus)
     addr.can_ifindex = ifr.ifr_ifindex;
     cout << kChannelLookup[bus] << " ifindex: " << addr.can_ifindex << endl;
 
+    // bind socket
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         cerr << "bind";
     }
     canbus_to_fd_.at(static_cast<int>(bus)) = s;
+
+    // Set timeout
+    struct timeval tv;
+    tv.tv_sec = kTimeoutSeconds;
+    tv.tv_usec = 0;
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
 }
 
 void MotorInterface::initialize_motor(CANChannel bus, uint32_t motor_id)
@@ -203,9 +222,11 @@ uint32_t MotorInterface::motor_id(uint32_t can_id)
 
 void MotorInterface::read_thread(CANChannel channel)
 {
-    while (should_read_)
+    while (should_read_.load())
     {
+        // block until multi angle can message is read
         MotorData motor_data = read_multi_angle(channel);
+        if (!motor_data.error)
         {
             unique_lock<mutex> lock(latest_data_lock_);
             // TODO: think about how to copy data from can. Only copy new data

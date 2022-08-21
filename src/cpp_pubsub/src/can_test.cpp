@@ -1,14 +1,13 @@
 #include "motor_interface.hpp"
 #include "prof_utils.hpp"
+#include <atomic>
 
-// TODO: figure out how to catch control-c and close sockets without this global
-unique_ptr<MotorInterface> motor_interface;
+atomic<bool> quit(false); // signal flag
 
-// TODO: figure out better way to catch control-c
 void sigint_handler(sig_atomic_t s)
 {
+    quit.store(true);
     printf("Caught signal %d\n", s);
-    exit(1);
 }
 
 int main()
@@ -16,14 +15,14 @@ int main()
     signal(SIGINT, sigint_handler);
 
     // TODO: Replace with make_unique after resolving argument list error
-    motor_interface = unique_ptr<MotorInterface>(new MotorInterface({{CANChannel::CAN0, {1, 2, 3}}, {CANChannel::CAN1, {1, 2, 3}}}, /*bitrate=*/1000000));
+    auto motor_interface = unique_ptr<MotorInterface>(new MotorInterface({{CANChannel::CAN0, {1, 2, 3}}, {CANChannel::CAN1, {1, 2, 3}}}, /*bitrate=*/1000000));
     motor_interface->initialize_canbuses();
     motor_interface->initialize_motors(); // not needed if you just want angles
     motor_interface->start_read_threads();
     cout << "Initialized canbuses, motors, threads" << endl;
 
     auto loop_start = time_now();
-    while (true)
+    while (!quit.load())
     {
         // Print time since start of program
         auto loop_now = time_now();
