@@ -21,14 +21,15 @@ int main()
     motor_interface->start_read_threads();
     cout << "Initialized canbuses, motors, threads" << endl;
 
+    float prevent_cut=0;
+
     auto loop_start = time_now();
     while (!quit.load())
     {
         // Print time since start of program
         auto loop_now = time_now();
         auto since_start = chrono::duration_cast<chrono::microseconds>(loop_now - loop_start);
-        cout << endl
-             << "\nSince start (us): " << since_start.count() << "\t";
+        // cout << "\nSince start (us): " << since_start.count() << "\t";
 
         // Print time took to send angle request
         auto start = time_now();
@@ -42,21 +43,14 @@ int main()
         // cout << "Angle request (ns): " << duration_ns(stop - start) << "\t"; // takes 80us with large variance
 
         auto retrieve_start = time_now();
-        cout << "Angles (deg): " << "\t";
         auto latest_data = motor_interface->latest_data();
-        cout << latest_data.at(0).at(1).multi_angle << "\t";
-        cout << latest_data.at(0).at(2).multi_angle << "\t";
-        cout << latest_data.at(0).at(3).multi_angle << "\t";
-        cout << latest_data.at(1).at(1).multi_angle << "\t";
-        cout << latest_data.at(1).at(2).multi_angle << "\t";
-        cout << latest_data.at(1).at(3).multi_angle << "\t";
+        // cout << "Angles (deg): " << "\t";
+        // cout << latest_data.at(0).at(1).multi_angle << "\t";
+        prevent_cut += latest_data.at(0).at(1).multi_angle;
         auto retrieve_end = time_now();
-        cout << "Retrival time (ns): " << duration_ns(retrieve_end - retrieve_start) << "\t"; // 30us to 300us
+        cout << "Retrival time (ns):\t" << duration_ns(retrieve_end - retrieve_start) << endl; // 155us average
+        // cout << "Size of data: " << sizeof(latest_data) << endl;
 
-        // float angle = motor_interface->read_multi_angle(CANChannel::CAN0);
-        // cout << "Multi-angle (deg): " << angle << "\t";
-
-        // usleep(500-220);
         usleep(2000); // sending to 3 motors takes 2500us
     }
     return 0;
