@@ -33,7 +33,6 @@ MotorInterface::MotorInterface(unordered_map<CANChannel, vector<uint32_t>> motor
     // DEBUG ONLY
     debug_start_ = time_now();
     canbus_to_fd_.fill(-1);
-    initialize_map();
 }
 
 MotorInterface::~MotorInterface()
@@ -48,17 +47,6 @@ MotorInterface::~MotorInterface()
     // }
     cout << "Closing can buses" << endl;
     close_canbuses();
-}
-
-void MotorInterface::initialize_map()
-{
-    for (const auto &[bus, motor_id_list] : motor_connections_)
-    {
-        for (const auto &motor_id : motor_id_list)
-        {
-            latest_data_.at(static_cast<int>(bus)).insert({motor_id, MotorData{.motor_id = motor_id}});
-        }
-    }
 }
 
 void MotorInterface::initialize_canbuses()
@@ -90,7 +78,7 @@ void MotorInterface::initialize_motors()
     initialized_ = true;
 }
 
-array<unordered_map<int, MotorData>, kNumCANChannels> MotorInterface::latest_data()
+array<array<MotorData, kServosPerChannel>, kNumCANChannels> MotorInterface::latest_data()
 {
     {
         unique_lock<mutex> lock(latest_data_lock_);
@@ -231,7 +219,7 @@ void MotorInterface::read_thread(CANChannel channel)
             unique_lock<mutex> lock(latest_data_lock_);
             // TODO: think about how to copy data from can. Only copy new data
             // cout << "Motor data: " << (int)motor_data.motor_id << "\t" << motor_data.multi_angle << "\t";
-            latest_data_.at(static_cast<int>(channel)).at(motor_data.motor_id).multi_angle = motor_data.multi_angle;
+            latest_data_.at(static_cast<int>(channel)).at(motor_data.motor_id - 1).multi_angle = motor_data.multi_angle;
         }
     }
 }

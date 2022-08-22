@@ -44,14 +44,15 @@ int main()
         auto retrieve_start = time_now();
         cout << "Angles (deg): " << "\t";
         auto latest_data = motor_interface->latest_data();
-        cout << latest_data.at(0).at(1).multi_angle << "\t";
-        cout << latest_data.at(0).at(2).multi_angle << "\t";
-        cout << latest_data.at(0).at(3).multi_angle << "\t";
-        cout << latest_data.at(1).at(1).multi_angle << "\t";
-        cout << latest_data.at(1).at(2).multi_angle << "\t";
-        cout << latest_data.at(1).at(3).multi_angle << "\t";
+        cout << latest_data.at(0).at(0).multi_angle << "\t";
+        cout << "Size of data: " << sizeof(latest_data) << "\t";
+        // cout << latest_data.at(0).at(1).multi_angle << "\t";
+        // cout << latest_data.at(0).at(2).multi_angle << "\t";
+        // cout << latest_data.at(1).at(0).multi_angle << "\t";
+        // cout << latest_data.at(1).at(1).multi_angle << "\t";
+        // cout << latest_data.at(1).at(2).multi_angle << "\t";
         auto retrieve_end = time_now();
-        cout << "Retrival time (ns): " << duration_ns(retrieve_end - retrieve_start) << "\t"; // 30us to 300us
+        cout << "Retrival time (ns): " << duration_ns(retrieve_end - retrieve_start) << "\t"; // 30us to 300us, 12us to 80us
 
         // float angle = motor_interface->read_multi_angle(CANChannel::CAN0);
         // cout << "Multi-angle (deg): " << angle << "\t";
