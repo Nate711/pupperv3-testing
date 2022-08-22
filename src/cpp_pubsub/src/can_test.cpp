@@ -46,12 +46,17 @@ int main()
         auto latest_data = motor_interface->latest_data();
         // cout << "Angles (deg): " << "\t";
         // cout << latest_data.at(0).at(1).multi_angle << "\t";
-        prevent_cut += latest_data.at(0).at(1).multi_angle;
+        for(int bus=0;bus<2;bus++) {
+            for(int servo=1;servo<=3;servo++) {
+                prevent_cut += latest_data.at(bus).at(servo).multi_angle;
+            }
+        }
         auto retrieve_end = time_now();
         cout << "Retrival time (ns):\t" << duration_ns(retrieve_end - retrieve_start) << endl; // 155us average
         // cout << "Size of data: " << sizeof(latest_data) << endl;
 
         usleep(2000); // sending to 3 motors takes 2500us
     }
+    cout << prevent_cut << endl;
     return 0;
 }
