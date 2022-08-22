@@ -25,10 +25,10 @@
 
 using namespace std;
 
-MotorInterface::MotorInterface(unordered_map<CANChannel, vector<uint32_t>> motor_connections, int bitrate) : motor_connections_(motor_connections),
-                                                                                                             bitrate_(bitrate),
-                                                                                                             initialized_(false),
-                                                                                                             should_read_(true)
+MotorInterface::MotorInterface(vector<CANChannel> motor_connections, int bitrate) : motor_connections_(motor_connections),
+                                                                                    bitrate_(bitrate),
+                                                                                    initialized_(false),
+                                                                                    should_read_(true)
 {
     // DEBUG ONLY
     debug_start_ = time_now();
@@ -51,7 +51,7 @@ MotorInterface::~MotorInterface()
 
 void MotorInterface::initialize_canbuses()
 {
-    for (const auto &[bus, motor_id_list] : motor_connections_)
+    for (const auto &bus : motor_connections_)
     {
         initialize_bus(bus);
     }
@@ -59,7 +59,7 @@ void MotorInterface::initialize_canbuses()
 
 void MotorInterface::close_canbuses()
 {
-    for (const auto &[bus, motor_id_list] : motor_connections_)
+    for (const auto &bus : motor_connections_)
     {
         close(canbus_to_fd_.at(static_cast<int>(bus)));
     }
@@ -68,9 +68,9 @@ void MotorInterface::close_canbuses()
 
 void MotorInterface::initialize_motors()
 {
-    for (const auto &[bus, motor_id_list] : motor_connections_)
+    for (const auto &bus : motor_connections_)
     {
-        for (const auto &motor_id : motor_id_list)
+        for (int motor_id = 1; motor_id <= kServosPerChannel; motor_id++)
         {
             initialize_motor(bus, motor_id);
         }
@@ -113,12 +113,12 @@ MotorData MotorInterface::read_multi_angle(CANChannel bus)
     // cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
     // cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
     if (nbytes < 0)
-    {   
+    {
         // Continue on read timeouts
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
             cout << "Bus " << static_cast<int>(bus) << " timed out on read" << endl;
-            return MotorData{.error=1};
+            return MotorData{.error = 1};
         }
         cerr << "ERROR: can raw socket read";
     }

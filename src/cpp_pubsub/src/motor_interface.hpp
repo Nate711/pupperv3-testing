@@ -48,7 +48,7 @@ struct MotorData
 class MotorInterface
 {
 public:
-    MotorInterface(unordered_map<CANChannel, vector<uint32_t>> motor_connections, int bitrate);
+    MotorInterface(vector<CANChannel> motor_connections, int bitrate);
     ~MotorInterface();
     void initialize_canbuses();
     void close_canbuses();
@@ -68,7 +68,7 @@ private:
 
     unordered_map<CANChannel, string> kChannelLookup = {{CANChannel::CAN0, "can0"}, {CANChannel::CAN1, "can1"}};
     array<int, 4> canbus_to_fd_;
-    unordered_map<CANChannel, vector<uint32_t>> motor_connections_;
+    vector<CANChannel> motor_connections_;
     const int bitrate_;
     bool initialized_;
     atomic<bool> should_read_;
