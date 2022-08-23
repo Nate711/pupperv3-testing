@@ -33,14 +33,15 @@ class PupperJointStatePublisher : public rclcpp::Node
 {
 public:
     PupperJointStatePublisher(float rate)
-        : Node("pupper_joint_state_publisher"), publish_rate(rate),
-          motor_interface_(kMotorConnections, kBitrate)
+        : Node("pupper_joint_state_publisher"), publish_rate(rate)
     {
+        // Node setup
         publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
         timer_ = this->create_wall_timer(
             rclcpp::WallRate(publish_rate).period(),
             std::bind(&PupperJointStatePublisher::publish_callback, this));
 
+        // Joint State message setup
         for (std::string joint_name : joint_names)
         {
             message.name.push_back(joint_name);
@@ -48,13 +49,40 @@ public:
             message.velocity.push_back(0.0);
             message.effort.push_back(0.0);
         }
+
+        // CAN interface setup
+        motor_interface_ = std::make_unique<MotorInterface>(kMotorConnections, kBitrate);
+        motor_interface_->initialize_canbuses();
+        motor_interface_->initialize_motors(); // not needed if you just want angles
+        motor_interface_->start_read_threads();
+    }
+    ~PupperJointStatePublisher()
+    {
     }
 
 private:
     void publish_callback()
     {
+        motor_interface_->request_multi_angle(CANChannel::CAN0, 1);
+        motor_interface_->request_multi_angle(CANChannel::CAN0, 2);
+        motor_interface_->request_multi_angle(CANChannel::CAN0, 3);
+        motor_interface_->request_multi_angle(CANChannel::CAN1, 1);
+        motor_interface_->request_multi_angle(CANChannel::CAN1, 2);
+        motor_interface_->request_multi_angle(CANChannel::CAN1, 3);
+
+        auto latest_data = motor_interface_->latest_data();
+        for (int bus = 0; bus < 2; bus++)
+        {
+            for (int servo = 0; servo < 3; servo++)
+            {
+                std::cout << latest_data.at(bus).at(servo).multi_angle << "\t";
+            }
+        }
+        std::cout << std::endl;
         message.header.stamp = now();
-        RCLCPP_INFO(this->get_logger(), "Publishing joint state");
+        message.position.at(0) = latest_data.at(0).at(1).multi_angle;
+
+        // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
         publisher_->publish(message);
     }
     rclcpp::TimerBase::SharedPtr timer_;
@@ -79,7 +107,7 @@ private:
 
     std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
     int kBitrate = 1000000;
-    MotorInterface motor_interface_;
+    std::unique_ptr<MotorInterface> motor_interface_;
 };
 
 int main(int argc, char *argv[])

@@ -65,8 +65,14 @@ private:
     uint32_t motor_id(uint32_t can_id);
     void read_thread(CANChannel channel);
     void send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload);
-
-    unordered_map<CANChannel, string> kChannelLookup = {{CANChannel::CAN0, "can0"}, {CANChannel::CAN1, "can1"}};
+    string channel_str(CANChannel channel) {
+        switch(channel) {
+            case CANChannel::CAN0:
+                return "can0";
+            case CANChannel::CAN1:
+                return "can1";
+        }
+    }
     array<int, 4> canbus_to_fd_;
     vector<CANChannel> motor_connections_;
     const int bitrate_;

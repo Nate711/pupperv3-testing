@@ -166,7 +166,7 @@ void MotorInterface::initialize_bus(CANChannel bus)
     }
 
     // find interface index
-    strcpy(ifr.ifr_name, kChannelLookup[bus].c_str());
+    strcpy(ifr.ifr_name, channel_str(bus).c_str());
     ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
     if (!ifr.ifr_ifindex)
     {
@@ -175,7 +175,7 @@ void MotorInterface::initialize_bus(CANChannel bus)
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
-    cout << kChannelLookup[bus] << " ifindex: " << addr.can_ifindex << endl;
+    cout << channel_str(bus) << " ifindex: " << addr.can_ifindex << endl;
 
     // bind socket
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)

@@ -12,6 +12,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 add_executable(talker src/joint_state_publisher.cpp)
+target_link_libraries(talker motor_interface)
 ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
 
 add_library(motor_interface src/motor_interface.cpp)
