@@ -65,12 +65,18 @@ private:
     uint32_t motor_id(uint32_t can_id);
     void read_thread(CANChannel channel);
     void send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload);
-    string channel_str(CANChannel channel) {
-        switch(channel) {
-            case CANChannel::CAN0:
-                return "can0";
-            case CANChannel::CAN1:
-                return "can1";
+    string channel_str(CANChannel channel)
+    {
+        switch (channel)
+        {
+        case CANChannel::CAN0:
+            return "can0";
+        case CANChannel::CAN1:
+            return "can1";
+        case CANChannel::CAN2:
+            return "can2";
+        case CANChannel::CAN3:
+            return "can3";
         }
     }
     array<int, 4> canbus_to_fd_;

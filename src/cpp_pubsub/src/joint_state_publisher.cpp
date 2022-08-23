@@ -80,7 +80,13 @@ private:
         }
         std::cout << std::endl;
         message.header.stamp = now();
-        message.position.at(0) = latest_data.at(0).at(1).multi_angle;
+        message.position.at(0) = latest_data.at(0).at(0).multi_angle;
+        message.position.at(1) = latest_data.at(0).at(1).multi_angle;
+        message.position.at(2) = latest_data.at(0).at(2).multi_angle;
+        message.position.at(3) = latest_data.at(1).at(0).multi_angle;
+        message.position.at(4) = latest_data.at(1).at(1).multi_angle;
+        message.position.at(5) = latest_data.at(1).at(2).multi_angle;
+
 
         // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
         publisher_->publish(message);
