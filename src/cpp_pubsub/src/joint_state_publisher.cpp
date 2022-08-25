@@ -24,6 +24,8 @@
 
 #include "motor_interface.hpp"
 
+#define K_SERVOS_PER_CHANNEL 6
+
 using namespace std::chrono_literals;
 
 /* This example creates a subclass of Node and uses std::bind() to register a
@@ -51,7 +53,7 @@ public:
         }
 
         // CAN interface setup
-        motor_interface_ = std::make_unique<MotorInterface>(kMotorConnections, kBitrate);
+        motor_interface_ = std::make_unique<MotorInterface<K_SERVOS_PER_CHANNEL>>(kMotorConnections, kBitrate);
         motor_interface_->initialize_canbuses();
         motor_interface_->initialize_motors(); // not needed if you just want angles
         motor_interface_->start_read_threads();
@@ -66,14 +68,18 @@ private:
         motor_interface_->request_multi_angle(CANChannel::CAN0, 1);
         motor_interface_->request_multi_angle(CANChannel::CAN0, 2);
         motor_interface_->request_multi_angle(CANChannel::CAN0, 3);
-        motor_interface_->request_multi_angle(CANChannel::CAN1, 1);
-        motor_interface_->request_multi_angle(CANChannel::CAN1, 2);
-        motor_interface_->request_multi_angle(CANChannel::CAN1, 3);
+        // motor_interface_->request_multi_angle(CANChannel::CAN1, 1);
+        // motor_interface_->request_multi_angle(CANChannel::CAN1, 2);
+        // motor_interface_->request_multi_angle(CANChannel::CAN1, 3);
+        motor_interface_->request_multi_angle(CANChannel::CAN0, 4);
+        motor_interface_->request_multi_angle(CANChannel::CAN0, 5);
+        motor_interface_->request_multi_angle(CANChannel::CAN0, 6);
 
         auto latest_data = motor_interface_->latest_data();
-        for (int bus = 0; bus < 2; bus++)
+        // for (int bus = 0; bus < 2; bus++)
+        for (int bus = 0; bus < 1; bus++)
         {
-            for (int servo = 0; servo < 3; servo++)
+            for (int servo = 0; servo < K_SERVOS_PER_CHANNEL; servo++)
             {
                 std::cout << latest_data.at(bus).at(servo).multi_angle << "\t";
             }
@@ -83,10 +89,12 @@ private:
         message.position.at(0) = latest_data.at(0).at(0).multi_angle;
         message.position.at(1) = latest_data.at(0).at(1).multi_angle;
         message.position.at(2) = latest_data.at(0).at(2).multi_angle;
-        message.position.at(3) = latest_data.at(1).at(0).multi_angle;
-        message.position.at(4) = latest_data.at(1).at(1).multi_angle;
-        message.position.at(5) = latest_data.at(1).at(2).multi_angle;
-
+        // message.position.at(3) = latest_data.at(1).at(0).multi_angle;
+        // message.position.at(4) = latest_data.at(1).at(1).multi_angle;
+        // message.position.at(5) = latest_data.at(1).at(2).multi_angle;
+        message.position.at(3) = latest_data.at(0).at(3).multi_angle;
+        message.position.at(4) = latest_data.at(0).at(4).multi_angle;
+        message.position.at(5) = latest_data.at(0).at(5).multi_angle;
 
         // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
         publisher_->publish(message);
@@ -111,15 +119,23 @@ private:
     };
     const float publish_rate;
 
-    std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
+    // std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
+    std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0};
     int kBitrate = 1000000;
-    std::unique_ptr<MotorInterface> motor_interface_;
+    std::unique_ptr<MotorInterface<K_SERVOS_PER_CHANNEL>> motor_interface_;
 };
 
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<PupperJointStatePublisher>(/*rate=*/500.0));
+    float rate = 500;
+    if (argc > 1)
+    {
+        rate = std::stof(argv[1]);
+    }
+    cout << "Rate: " << rate << endl;
+
+    rclcpp::spin(std::make_shared<PupperJointStatePublisher>(/*rate=*/rate));
     rclcpp::shutdown();
     return 0;
 }

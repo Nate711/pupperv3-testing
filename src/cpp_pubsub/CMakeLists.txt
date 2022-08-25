@@ -19,12 +19,19 @@ add_library(motor_interface src/motor_interface.cpp)
 add_executable(can_test src/can_test.cpp)
 target_link_libraries(can_test motor_interface)
 
+add_executable(pd_test src/pd_test.cpp)
+target_link_libraries(pd_test motor_interface)
+
 install(TARGETS
 	talker
 	DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS
     can_test
+    DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS
+    pd_test
     DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

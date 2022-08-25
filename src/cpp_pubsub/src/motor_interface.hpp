@@ -8,7 +8,6 @@
 #include <string>
 #include <cstring>
 #include <array>
-#include <unordered_map>
 #include <signal.h>
 #include <memory>
 #include <chrono>
@@ -25,8 +24,14 @@
 
 using namespace std;
 
-const int kServosPerChannel = 3;
+// const int kServosPerChannel = 6;
 const int kNumCANChannels = 4;
+
+const float kCurrentWriteMax = 32.0;
+const int kCurrentMultiplier = 2000;
+const int kCurrentRawReadMax = 2048;
+const float kCurrentReadMax = 33.0;
+const int kVelocityMultiplier = 100;
 
 enum class CANChannel
 {
@@ -40,11 +45,16 @@ const vector<CANChannel> kAllCANChannels = {CANChannel::CAN0, CANChannel::CAN1, 
 
 struct MotorData
 {
-    uint8_t error = 0;
-    uint8_t motor_id = 0;
-    float multi_angle = 0;
+    uint8_t error;
+    uint8_t motor_id;
+    float multi_angle;      // degs
+    float encoder_position; // ticks
+    float velocity;         // degs per sec
+    float current;          // As
+    float temp;             // C
 };
 
+template <int kServosPerChannel>
 class MotorInterface
 {
 public:
@@ -54,17 +64,21 @@ public:
     void close_canbuses();
     void initialize_motors();
     void request_multi_angle(CANChannel bus, uint32_t motor_id);
-    MotorData read_multi_angle(CANChannel bus);
+    void command_current(CANChannel bus, uint32_t motor_id, float current);
+    void command_velocity(CANChannel bus, uint32_t motor_id, float velocity);
+    MotorData read_blocking(CANChannel bus);
     void start_read_threads();
     array<array<MotorData, kServosPerChannel>, kNumCANChannels> latest_data();
 
 private:
     void initialize_bus(CANChannel bus);
     void initialize_motor(CANChannel bus, uint32_t motor_id);
+    struct can_frame read_canframe_blocking(CANChannel bus);
     uint32_t can_id(uint32_t motor_id);
     uint32_t motor_id(uint32_t can_id);
     void read_thread(CANChannel channel);
     void send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload);
+    MotorData parse_frame(const struct can_frame &frame);
     string channel_str(CANChannel channel)
     {
         switch (channel)
@@ -77,6 +91,9 @@ private:
             return "can2";
         case CANChannel::CAN3:
             return "can3";
+        default:
+            cerr << "Invalid can channel" << endl;
+            return "";
         }
     }
     array<int, 4> canbus_to_fd_;
@@ -89,6 +106,8 @@ private:
     const uint8_t kStartup1 = 0x88;
     const uint8_t kStartup2 = 0x77;
     const uint8_t kGetMultiAngle = 0x92;
+    const uint8_t kCommandCurrent = 0xA1;
+    const uint8_t kCommandVelocity = 0xA2;
     const float kDegsPerTick = 0.01;
     const float kSpeedReduction = 0.1;
 
