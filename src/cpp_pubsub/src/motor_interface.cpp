@@ -43,6 +43,9 @@ TEMPLATE_HEADER
 MOTOR_INTERFACE::~MotorInterface()
 {
     cout << "Calling motor interface destructor." << endl;
+    cout << "Stopping all motors." << endl;
+    command_all_stop();
+    cout << "Signaled read threads to stop." << endl;
     should_read_.store(false);
     // Causes lots of can socket exceptions / errors
     // for (thread &active_thread : read_threads_)
@@ -120,6 +123,24 @@ void MOTOR_INTERFACE::command_velocity(CANChannel bus, uint32_t motor_id, float 
     uint8_t B2 = (discrete_velocity >> 16) & 0xFF;
     uint8_t B3 = (discrete_velocity >> 24) & 0xFF;
     send(bus, motor_id, {kCommandVelocity, 0, 0, 0, LSB, B1, B2, B3});
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::command_stop(CANChannel bus, uint32_t motor_id)
+{
+    send(bus, motor_id, {kCommandStop, 0, 0, 0, 0, 0, 0, 0});
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::command_all_stop()
+{
+    for (auto bus : motor_connections_)
+    {
+        for (int motor_id = 1; motor_id <= kServosPerChannel; motor_id++)
+        {
+            command_stop(bus, motor_id);
+        }
+    }
 }
 
 TEMPLATE_HEADER
@@ -209,7 +230,7 @@ MotorData MOTOR_INTERFACE::parse_frame(const struct can_frame &frame)
         motor_data.temp = temp;
         motor_data.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
         motor_data.velocity = speed_raw;
-        motor_data.encoder_position = position_raw;
+        motor_data.encoder_counts = position_raw;
     }
     return motor_data;
 }

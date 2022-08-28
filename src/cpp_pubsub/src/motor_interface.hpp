@@ -32,6 +32,7 @@ const int kCurrentMultiplier = 2000;
 const int kCurrentRawReadMax = 2048;
 const float kCurrentReadMax = 33.0;
 const int kVelocityMultiplier = 100;
+const int kEncoderCountsPerRot = 65536;
 
 enum class CANChannel
 {
@@ -45,13 +46,13 @@ const vector<CANChannel> kAllCANChannels = {CANChannel::CAN0, CANChannel::CAN1, 
 
 struct MotorData
 {
-    uint8_t error;
-    uint8_t motor_id;
-    float multi_angle;      // degs
-    float encoder_position; // ticks
-    float velocity;         // degs per sec
-    float current;          // As
-    float temp;             // C
+    uint8_t error = 0;
+    uint8_t motor_id = 0;
+    float multi_angle = 0;      // degs
+    int16_t encoder_counts = 0; // counts -2^15 + 1 to 2^15
+    float velocity = 0;         // degs per sec
+    float current = 0;          // As
+    float temp = 0;             // C
 };
 
 template <int kServosPerChannel>
@@ -66,6 +67,8 @@ public:
     void request_multi_angle(CANChannel bus, uint32_t motor_id);
     void command_current(CANChannel bus, uint32_t motor_id, float current);
     void command_velocity(CANChannel bus, uint32_t motor_id, float velocity);
+    void command_stop(CANChannel bus, uint32_t motor_id);
+    void command_all_stop();
     MotorData read_blocking(CANChannel bus);
     void start_read_threads();
     array<array<MotorData, kServosPerChannel>, kNumCANChannels> latest_data();
@@ -108,6 +111,7 @@ private:
     const uint8_t kGetMultiAngle = 0x92;
     const uint8_t kCommandCurrent = 0xA1;
     const uint8_t kCommandVelocity = 0xA2;
+    const uint8_t kCommandStop = 0x81;
     const float kDegsPerTick = 0.01;
     const float kSpeedReduction = 0.1;
 
