@@ -192,7 +192,7 @@ struct can_frame MOTOR_INTERFACE::read_canframe_blocking(CANChannel bus)
         cerr << "ERROR: did not read full can frame";
     }
     stop = time_now();
-    cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
+    // cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
     return frame;
 }
 
@@ -337,7 +337,7 @@ void MOTOR_INTERFACE::send(CANChannel bus, uint32_t motor_id, const array<uint8_
         cerr << "Error writing can frame";
     }
     auto stop = time_now();
-    cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
+    // cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
     // cout << "Send start (ms): " << duration_ms(start - debug_start_) << "\t";
     // cout << "Send end (ms): " << duration_ms(stop - debug_start_) << "\t";
 }
