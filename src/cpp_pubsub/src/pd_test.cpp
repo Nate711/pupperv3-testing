@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #define K_SERVOS_PER_CHANNEL 1
+#define PRINT_CYCLE 5
 
 atomic<bool> quit(false); // signal flag
 
@@ -37,7 +38,7 @@ int main()
         // Print time since start of program
         auto loop_now = time_now();
         auto since_start = chrono::duration_cast<chrono::microseconds>(loop_now - loop_start);
-        if (loop_count % 2 == 0)
+        if (loop_count % PRINT_CYCLE == 0)
         {
             cout << "\nSince start (us): " << since_start.count() << "\t";
         }
@@ -70,18 +71,19 @@ int main()
         float velocity_command = position_error * 10;
         velocity_command = std::clamp(velocity_command, -3600.0f, 3600.0f);
         motor_interface.command_velocity(CANChannel::CAN0, 1, velocity_command);
-        if (loop_count % 2 == 0)
+        if (loop_count % PRINT_CYCLE == 0)
         {
             // cout << motor_data.temp << "\t" << motor_data.current << "\t" << motor_data.velocity << "\t" << motor_data.encoder_counts << "\t" << rotations << "\t" << multi_loop_angle << "\t";
             cout << motor_data.velocity << "\t" << motor_data.encoder_counts << "\t" << rotations << "\t" << multi_loop_angle << "\t";
         }
         // motor_interface.request_multi_angle(CANChannel::CAN0, 1);
         // motor_interface.command_velocity(CANChannel::CAN0, 1, 0.0);
-        usleep(2000); // sending to 3 motors takes 2500us
+        usleep(1000); // sending to 3 motors takes 2500us
 
         // torque control: jiggles with kd=0.01 and usleep(5000)
         // torque control: jiggles with kd=0.01 and usleep(2000)
         // speed-based pos control: good with kp = 10, usleep(1000 or 2000), max speed 3600
+        // works at least at 1khz, 500hz, 200hz
         // have to plug in motor before running program
         loop_count++;
     }
