@@ -27,7 +27,10 @@ int main(int argc, char *argv[])
     signal(SIGINT, sigint_handler);
 
     // Create position controller
-    MotorController<6> controller(50.0, 20000.0, {CANChannel::CAN0}, 1000000);
+    MotorController<6> controller(/*kp (dps per deg)=*/50.0,
+                                  /*max_speed (dps)=*/20000.0,
+                                  /*can channels*/ {CANChannel::CAN0},
+                                  /*bitrate=*/1000000);
     controller.begin();
     cout << "Initialized controller." << endl;
     vector<array<float, 6>> goal_positions = {{0, 0, 0, 0, 0, 0}};
@@ -48,7 +51,7 @@ int main(int argc, char *argv[])
 
         float amp = 450.0; // 90 deg sweep at output
         float secs_since_start = duration_ms(loop_now - loop_start) / 1000000.0;
-        float freq = secs_since_start/2.0; // chirp signal
+        float freq = secs_since_start / 2.0; // chirp signal
         float sample = std::sin(secs_since_start * 2 * M_PI * freq);
         // Set desired positions
         goal_positions.at(0).at(0) = amp * sample;
