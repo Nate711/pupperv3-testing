@@ -44,15 +44,29 @@ enum class CANChannel
 
 const vector<CANChannel> kAllCANChannels = {CANChannel::CAN0, CANChannel::CAN1, CANChannel::CAN2, CANChannel::CAN3};
 
+struct CommonResponse
+{
+    int16_t encoder_counts = 0;          // counts (-2^15-1 to 2^15)
+    int16_t previous_encoder_counts = 0; // previous counts
+    float velocity = 0.0;                // degs per sec
+    float current = 0.0;                 // Amps
+    uint8_t temp = 0;                    // C
+
+    int32_t rotations = 0;        // motor rotations (post-processed)
+    float multi_loop_angle = 0.0; // degs (post-processed)
+};
+
+struct MultiLoopAngleResponse
+{
+    float multi_loop_angle = 0.0; // degs
+};
+
 struct MotorData
 {
     uint8_t error = 0;
     uint8_t motor_id = 0;
-    float multi_angle = 0;      // degs
-    int16_t encoder_counts = 0; // counts -2^15 + 1 to 2^15
-    float velocity = 0;         // degs per sec
-    float current = 0;          // As
-    float temp = 0;             // C
+    MultiLoopAngleResponse multi_loop;
+    CommonResponse common;
 };
 
 template <int kServosPerChannel>
@@ -64,24 +78,29 @@ public:
     void initialize_canbuses();
     void close_canbuses();
     void initialize_motors();
-    void request_multi_angle(CANChannel bus, uint32_t motor_id);
-    void command_current(CANChannel bus, uint32_t motor_id, float current);
-    void command_velocity(CANChannel bus, uint32_t motor_id, float velocity);
-    void command_stop(CANChannel bus, uint32_t motor_id);
+    void request_multi_angle(CANChannel bus, uint8_t motor_id);
+    void command_current(CANChannel bus, uint8_t motor_id, float current);
+    void command_velocity(CANChannel bus, uint8_t motor_id, float velocity);
+    void command_stop(CANChannel bus, uint8_t motor_id);
     void command_all_stop();
-    MotorData read_blocking(CANChannel bus);
+    void read_blocking(CANChannel bus);
     void start_read_threads();
     array<array<MotorData, kServosPerChannel>, kNumCANChannels> latest_data();
+    MotorData motor_data_copy(CANChannel bus, uint8_t motor_id);
 
 private:
     void initialize_bus(CANChannel bus);
-    void initialize_motor(CANChannel bus, uint32_t motor_id);
+    void initialize_motor(CANChannel bus, uint8_t motor_id);
     struct can_frame read_canframe_blocking(CANChannel bus);
-    uint32_t can_id(uint32_t motor_id);
-    uint32_t motor_id(uint32_t can_id);
+    uint32_t can_id(uint8_t motor_id);
+    uint8_t motor_id(uint32_t can_id);
     void read_thread(CANChannel channel);
-    void send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload);
-    MotorData parse_frame(const struct can_frame &frame);
+    void send(CANChannel bus, uint8_t motor_id, const array<uint8_t, 8> &payload);
+    MotorData &motor_data(CANChannel bus, uint8_t motor_id);
+    void parse_frame(CANChannel bus, const struct can_frame &frame);
+    void multi_angle_update(CANChannel bus, uint8_t motor_id, const struct can_frame &frame);
+    void torque_velocity_update(CANChannel bus, uint8_t motor_id, const struct can_frame &frame);
+    void update_rotation(CommonResponse &common);
     string channel_str(CANChannel channel)
     {
         switch (channel)

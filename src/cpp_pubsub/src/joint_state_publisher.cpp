@@ -81,20 +81,20 @@ private:
         {
             for (int servo = 0; servo < K_SERVOS_PER_CHANNEL; servo++)
             {
-                std::cout << latest_data.at(bus).at(servo).multi_angle << "\t";
+                std::cout << latest_data.at(bus).at(servo).multi_loop.multi_loop_angle << "\t";
             }
         }
         std::cout << std::endl;
         message.header.stamp = now();
-        message.position.at(0) = latest_data.at(0).at(0).multi_angle;
-        message.position.at(1) = latest_data.at(0).at(1).multi_angle;
-        message.position.at(2) = latest_data.at(0).at(2).multi_angle;
-        // message.position.at(3) = latest_data.at(1).at(0).multi_angle;
-        // message.position.at(4) = latest_data.at(1).at(1).multi_angle;
-        // message.position.at(5) = latest_data.at(1).at(2).multi_angle;
-        message.position.at(3) = latest_data.at(0).at(3).multi_angle;
-        message.position.at(4) = latest_data.at(0).at(4).multi_angle;
-        message.position.at(5) = latest_data.at(0).at(5).multi_angle;
+        message.position.at(0) = latest_data.at(0).at(0).multi_loop.multi_loop_angle;
+        message.position.at(1) = latest_data.at(0).at(1).multi_loop.multi_loop_angle;
+        message.position.at(2) = latest_data.at(0).at(2).multi_loop.multi_loop_angle;
+        // message.position.at(3) = latest_data.at(1).at(0).multi_loop.multi_loop_angle;
+        // message.position.at(4) = latest_data.at(1).at(1).multi_loop.multi_loop_angle;
+        // message.position.at(5) = latest_data.at(1).at(2).multi_loop.multi_loop_angle;
+        message.position.at(3) = latest_data.at(0).at(3).multi_loop.multi_loop_angle;
+        message.position.at(4) = latest_data.at(0).at(4).multi_loop.multi_loop_angle;
+        message.position.at(5) = latest_data.at(0).at(5).multi_loop.multi_loop_angle;
 
         // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
         publisher_->publish(message);

@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #define K_SERVOS_PER_CHANNEL 6
-#define PRINT_CYCLE 10
+#define PRINT_CYCLE 1
 
 atomic<bool> quit(false); // signal flag
 
@@ -28,10 +28,6 @@ int main()
 
     auto loop_start = time_now();
 
-    int rotations = 0;
-    int16_t previous_encoder_counts = 0;
-    float multi_loop_angle = 0;
-
     int loop_count = 0;
     auto last_loop_ts = time_now();
     while (!quit.load())
@@ -45,37 +41,29 @@ int main()
         }
         last_loop_ts = loop_now;
 
-        auto latest_data = motor_interface.latest_data();
-        auto motor_data = latest_data.at(0).at(0);
+        auto motor_data = motor_interface.motor_data_copy(CANChannel::CAN0, 1);
 
-        if (motor_data.encoder_counts - previous_encoder_counts > kEncoderCountsPerRot / 2)
-        {
-            rotations--;
-        }
-        if (motor_data.encoder_counts - previous_encoder_counts < -kEncoderCountsPerRot / 2)
-        {
-            rotations++;
-        }
-        previous_encoder_counts = motor_data.encoder_counts;
-
-        multi_loop_angle = (float)(rotations * kEncoderCountsPerRot + motor_data.encoder_counts) / kEncoderCountsPerRot * 360.0;
-
-        // motor_interface.request_multi_angle(CANChannel::CAN0, 1); // would overwrite motor_data
+        motor_interface.request_multi_angle(CANChannel::CAN0, 1); // would overwrite motor_data
         motor_interface.request_multi_angle(CANChannel::CAN0, 2);
         motor_interface.request_multi_angle(CANChannel::CAN0, 3);
         motor_interface.request_multi_angle(CANChannel::CAN0, 4);
         motor_interface.request_multi_angle(CANChannel::CAN0, 5);
         motor_interface.request_multi_angle(CANChannel::CAN0, 6);
 
-        float position_target = 0.0;
-        float position_error = position_target - multi_loop_angle;
+        float position_target = 1000.0;
+        float position_error = position_target - motor_data.common.multi_loop_angle;
         float velocity_command = position_error * 10;
-        velocity_command = std::clamp(velocity_command, -360.0f, 360.0f);
+        velocity_command = std::clamp(velocity_command, -200.0f, 200.0f);
         motor_interface.command_velocity(CANChannel::CAN0, 1, velocity_command);
         if (loop_count % PRINT_CYCLE == 0)
         {
             // cout << motor_data.temp << "\t" << motor_data.current << "\t" << motor_data.velocity << "\t" << motor_data.encoder_counts << "\t" << rotations << "\t" << multi_loop_angle << "\t";
-            cout << motor_data.velocity << "\t" << motor_data.encoder_counts << "\t" << rotations << "\t" << multi_loop_angle << "\t";
+            cout << motor_data.common.current << "\t" << motor_data.common.velocity << "\t" << motor_data.common.encoder_counts << "\t";
+            cout << motor_data.common.rotations << "\t" << motor_data.common.multi_loop_angle << "\t";
+            
+            for(int motor_id=1; motor_id < K_SERVOS_PER_CHANNEL; motor_id++) {
+                cout << motor_interface.motor_data_copy(CANChannel::CAN0, motor_id).multi_loop.multi_loop_angle;
+            }
         }
         // motor_interface.request_multi_angle(CANChannel::CAN0, 1);
         // motor_interface.command_velocity(CANChannel::CAN0, 1, 0.0);

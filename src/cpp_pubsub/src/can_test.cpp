@@ -38,9 +38,9 @@ int main()
         motor_interface->request_multi_angle(CANChannel::CAN0, 1);
         motor_interface->request_multi_angle(CANChannel::CAN0, 2);
         motor_interface->request_multi_angle(CANChannel::CAN0, 3);
-        motor_interface->request_multi_angle(CANChannel::CAN1, 1);
-        motor_interface->request_multi_angle(CANChannel::CAN1, 2);
-        motor_interface->request_multi_angle(CANChannel::CAN1, 3);
+        // motor_interface->request_multi_angle(CANChannel::CAN1, 1);
+        // motor_interface->request_multi_angle(CANChannel::CAN1, 2);
+        // motor_interface->request_multi_angle(CANChannel::CAN1, 3);
         auto stop = time_now();
         cout << "Angle request (ns): " << duration_ns(stop - start) << "\t"; // takes 80us with large variance
 
@@ -50,7 +50,7 @@ int main()
         {
             for (int servo = 0; servo < 3; servo++)
             {
-                cout << latest_data.at(bus).at(servo).multi_angle << "\t";
+                cout << latest_data.at(bus).at(servo).multi_loop.multi_loop_angle << "\t";
             }
         }
         auto retrieve_end = time_now();

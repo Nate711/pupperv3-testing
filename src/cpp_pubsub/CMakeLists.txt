@@ -11,16 +11,26 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
+# Libraries
+include_directories(${CMAKE_SOURCE_DIR}/lib)
+add_library(motor_interface lib/motor_interface.cpp)
+
+add_library(motor_controller lib/motor_controller.cpp)
+target_link_libraries(motor_controller motor_interface)
+
+# Executables
 add_executable(talker src/joint_state_publisher.cpp)
 target_link_libraries(talker motor_interface)
 ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
 
-add_library(motor_interface src/motor_interface.cpp)
 add_executable(can_test src/can_test.cpp)
 target_link_libraries(can_test motor_interface)
 
 add_executable(pd_test src/pd_test.cpp)
 target_link_libraries(pd_test motor_interface)
+
+add_executable(motor_controller_test src/motor_controller_test.cpp)
+target_link_libraries(motor_controller_test motor_controller)
 
 install(TARGETS
 	talker
@@ -32,6 +42,10 @@ install(TARGETS
 
 install(TARGETS
     pd_test
+    DESTINATION lib/${PROJECT_NAME})
+  
+install(TARGETS
+    motor_controller_test
     DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

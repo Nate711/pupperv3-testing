@@ -29,10 +29,11 @@ using namespace std;
 #define MOTOR_INTERFACE MotorInterface<kServosPerChannel>
 
 TEMPLATE_HEADER
-MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections, int bitrate) : motor_connections_(motor_connections),
-                                                                                     bitrate_(bitrate),
-                                                                                     initialized_(false),
-                                                                                     should_read_(true)
+MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections,
+                                int bitrate) : motor_connections_(motor_connections),
+                                               bitrate_(bitrate),
+                                               initialized_(false),
+                                               should_read_(true)
 {
     // DEBUG ONLY
     debug_start_ = time_now();
@@ -83,7 +84,8 @@ void MOTOR_INTERFACE::initialize_motors()
     {
         for (int motor_id = 1; motor_id <= kServosPerChannel; motor_id++)
         {
-            cout << "Initializing motor id: " << motor_id << " on channel: " << static_cast<int>(bus) << endl;
+            cout << "Initializing motor id: " << motor_id;
+            cout << " on channel: " << static_cast<int>(bus) << endl;
             initialize_motor(bus, motor_id);
         }
     }
@@ -103,7 +105,9 @@ array<array<MotorData, kServosPerChannel>, kNumCANChannels> MOTOR_INTERFACE::lat
 Amps
 */
 TEMPLATE_HEADER
-void MOTOR_INTERFACE::command_current(CANChannel bus, uint32_t motor_id, float current)
+void MOTOR_INTERFACE::command_current(CANChannel bus,
+                                      uint8_t motor_id,
+                                      float current)
 {
     int16_t discrete_current = current / kCurrentWriteMax * kCurrentMultiplier;
     uint8_t LSB = discrete_current & 0xFF;
@@ -115,7 +119,9 @@ void MOTOR_INTERFACE::command_current(CANChannel bus, uint32_t motor_id, float c
 DEG/S
 */
 TEMPLATE_HEADER
-void MOTOR_INTERFACE::command_velocity(CANChannel bus, uint32_t motor_id, float velocity)
+void MOTOR_INTERFACE::command_velocity(CANChannel bus,
+                                       uint8_t motor_id,
+                                       float velocity)
 {
     int32_t discrete_velocity = velocity * kVelocityMultiplier;
     uint8_t LSB = discrete_velocity & 0xFF;
@@ -126,7 +132,7 @@ void MOTOR_INTERFACE::command_velocity(CANChannel bus, uint32_t motor_id, float 
 }
 
 TEMPLATE_HEADER
-void MOTOR_INTERFACE::command_stop(CANChannel bus, uint32_t motor_id)
+void MOTOR_INTERFACE::command_stop(CANChannel bus, uint8_t motor_id)
 {
     send(bus, motor_id, {kCommandStop, 0, 0, 0, 0, 0, 0, 0});
 }
@@ -144,7 +150,7 @@ void MOTOR_INTERFACE::command_all_stop()
 }
 
 TEMPLATE_HEADER
-void MOTOR_INTERFACE::request_multi_angle(CANChannel bus, uint32_t motor_id)
+void MOTOR_INTERFACE::request_multi_angle(CANChannel bus, uint8_t motor_id)
 {
     auto start = time_now();
     send(bus, motor_id, {kGetMultiAngle, 0, 0, 0, 0, 0, 0, 0});
@@ -153,11 +159,26 @@ void MOTOR_INTERFACE::request_multi_angle(CANChannel bus, uint32_t motor_id)
 }
 
 TEMPLATE_HEADER
-MotorData MotorInterface<kServosPerChannel>::read_blocking(CANChannel bus)
+void MOTOR_INTERFACE::update_rotation(CommonResponse &common)
+{
+    if (common.encoder_counts - common.previous_encoder_counts > kEncoderCountsPerRot / 2)
+    {
+        common.rotations--;
+    }
+    if (common.encoder_counts - common.previous_encoder_counts < -kEncoderCountsPerRot / 2)
+    {
+        common.rotations++;
+    }
+    common.previous_encoder_counts = common.encoder_counts;
+    common.multi_loop_angle = (common.rotations + (float)common.encoder_counts / kEncoderCountsPerRot) * 360.0;
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::read_blocking(CANChannel bus)
 {
     struct can_frame frame = read_canframe_blocking(bus);
     // cout << "CAN id: " << frame.can_id << endl;
-    return parse_frame(frame);
+    parse_frame(bus, frame);
 }
 
 TEMPLATE_HEADER
@@ -197,42 +218,77 @@ struct can_frame MOTOR_INTERFACE::read_canframe_blocking(CANChannel bus)
 }
 
 TEMPLATE_HEADER
-MotorData MOTOR_INTERFACE::parse_frame(const struct can_frame &frame)
+MotorData &MOTOR_INTERFACE::motor_data(CANChannel bus, uint8_t motor_id)
 {
-    MotorData motor_data;
-    motor_data.motor_id = motor_id(frame.can_id);
-    if (motor_data.motor_id <= 0 || motor_data.motor_id > kServosPerChannel)
+    return latest_data_.at(static_cast<int>(bus)).at(motor_id - 1);
+}
+
+TEMPLATE_HEADER
+MotorData MOTOR_INTERFACE::motor_data_copy(CANChannel bus, uint8_t motor_id)
+{
+    unique_lock<mutex> lock(latest_data_lock_);
+    return latest_data_.at(static_cast<int>(bus)).at(motor_id - 1);
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::multi_angle_update(CANChannel bus,
+                                         uint8_t motor_id, const struct can_frame &frame)
+{
+    int64_t multi_loop_angle = 0;
+    memcpy(&multi_loop_angle, frame.data, 8);
+    multi_loop_angle = multi_loop_angle >> 8;
+    {
+        unique_lock<mutex> lock(latest_data_lock_);
+        motor_data(bus, motor_id).multi_loop.multi_loop_angle = multi_loop_angle *
+                                                                kDegsPerTick *
+                                                                kSpeedReduction;
+    }
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::torque_velocity_update(CANChannel bus,
+                                             uint8_t motor_id,
+                                             const struct can_frame &frame)
+{
+    int8_t temp_raw = static_cast<int8_t>(frame.data[1]);
+    int16_t current_raw;
+    memcpy(&current_raw, frame.data + 2, 2);
+    int16_t speed_raw;
+    memcpy(&speed_raw, frame.data + 4, 2);
+    int16_t encoder_counts;
+    memcpy(&encoder_counts, frame.data + 6, 2);
+
+    // TODO: Implement per-motor mutex
+    {
+        unique_lock<mutex> lock(latest_data_lock_);
+        CommonResponse &common = motor_data(bus, motor_id).common;
+        common.temp = temp_raw;
+        common.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
+        common.velocity = speed_raw;
+        common.encoder_counts = encoder_counts;
+        update_rotation(common);
+    }
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame)
+{
+    uint8_t motor_id_ = motor_id(frame.can_id);
+    if (motor_id_ <= 0 || motor_id_ > kServosPerChannel)
     {
         cout << "Invalid motor id." << endl;
-        return motor_data;
+        return;
     }
+
     uint8_t command_id = frame.data[0];
     if (command_id == kGetMultiAngle)
     {
-        auto start = time_now();
-        int64_t multi_loop_angle = 0;
-        memcpy(&multi_loop_angle, frame.data, 8);
-        multi_loop_angle = multi_loop_angle >> 8;
-        auto stop = time_now();
-        // cout << "Frame parse (ns): " << duration_ns(stop - start) << "\t";
-        motor_data.multi_angle = multi_loop_angle * kDegsPerTick * kSpeedReduction;
+        multi_angle_update(bus, motor_id_, frame);
     }
     if (command_id == kCommandCurrent || command_id == kCommandVelocity)
     {
-        int8_t temp = static_cast<int8_t>(frame.data[1]);
-        int16_t current_raw;
-        memcpy(&current_raw, frame.data + 2, 2);
-        int16_t speed_raw;
-        memcpy(&speed_raw, frame.data + 4, 2);
-        int16_t position_raw;
-        memcpy(&position_raw, frame.data + 6, 2);
-
-        motor_data.temp = temp;
-        motor_data.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
-        motor_data.velocity = speed_raw;
-        motor_data.encoder_counts = position_raw;
+        torque_velocity_update(bus, motor_id_, frame);
     }
-    return motor_data;
 }
 
 TEMPLATE_HEADER
@@ -282,7 +338,7 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
 }
 
 TEMPLATE_HEADER
-void MOTOR_INTERFACE::initialize_motor(CANChannel bus, uint32_t motor_id)
+void MOTOR_INTERFACE::initialize_motor(CANChannel bus, uint8_t motor_id)
 {
     send(bus, motor_id, {kStartup0, 0, 0, 0, 0, 0, 0, 0});
     usleep(10000);
@@ -293,13 +349,13 @@ void MOTOR_INTERFACE::initialize_motor(CANChannel bus, uint32_t motor_id)
 }
 
 TEMPLATE_HEADER
-uint32_t MOTOR_INTERFACE::can_id(uint32_t motor_id)
+uint32_t MOTOR_INTERFACE::can_id(uint8_t motor_id)
 {
     return 0x140 + motor_id;
 }
 
 TEMPLATE_HEADER
-uint32_t MOTOR_INTERFACE::motor_id(uint32_t can_id)
+uint8_t MOTOR_INTERFACE::motor_id(uint32_t can_id)
 {
     return can_id - 0x140;
 }
@@ -311,19 +367,14 @@ void MOTOR_INTERFACE::read_thread(CANChannel channel)
     {
         // block until multi angle can message is read
         // MotorData motor_data = read_multi_angle(channel);
-        MotorData motor_data = read_blocking(channel);
-        if (!motor_data.error)
-        {
-            unique_lock<mutex> lock(latest_data_lock_);
-            // TODO: think about how to copy data from can. Only copy new data so don't overwrite data from other types of commands
-            // cout << "Motor data: " << (int)motor_data.motor_id << "\t" << motor_data.multi_angle << "\t";
-            latest_data_.at(static_cast<int>(channel)).at(motor_data.motor_id - 1) = motor_data;
-        }
+        read_blocking(channel);
     }
 }
 
 TEMPLATE_HEADER
-void MOTOR_INTERFACE::send(CANChannel bus, uint32_t motor_id, const array<uint8_t, 8> &payload)
+void MOTOR_INTERFACE::send(CANChannel bus,
+                           uint8_t motor_id,
+                           const array<uint8_t, 8> &payload)
 {
     int file_descriptor = canbus_to_fd_.at(static_cast<int>(bus));
     struct can_frame frame;
