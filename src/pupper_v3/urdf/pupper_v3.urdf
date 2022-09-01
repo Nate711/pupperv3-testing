@@ -1,0 +1,313 @@
+<?xml version="1.0"?>
+<!-- created with Phobos 1.0.1 "Capricious Choutengan" -->
+  <robot name="pupper_v3">
+
+    <link name="base_link">
+      <inertial>
+        <origin xyz="9e-05 0 0.02177" rpy="0 0 0"/>
+        <mass value="1.2"/>
+        <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.005"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.004">
+        <origin xyz="-0.0019 -0.00027 0.02901" rpy="1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.004.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+      <collision name="ProtoAssembly-MG v25.004">
+        <origin xyz="9e-05 0 0.02177" rpy="1.5708 0 0"/>
+        <geometry>
+          <box size="0.24018 0.10194 0.115"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="leg_back_l_1">
+      <inertial>
+        <origin xyz="0.00263 8e-05 0.03455" rpy="0 0 0"/>
+        <mass value="0.16"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.016">
+        <origin xyz="0.00263 8e-05 0.03455" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.016.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_back_l_2">
+      <inertial>
+        <origin xyz="0.0461 0.00255 -0.05754" rpy="0 0 0"/>
+        <mass value="0.02"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.014">
+        <origin xyz="0.0461 0.00255 -0.05754" rpy="-1.5708 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.014.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_back_l_3">
+      <inertial>
+        <origin xyz="-0.08114 0.0073 -0.01746" rpy="0 0 0"/>
+        <mass value="0.045"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="4e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.015">
+        <origin xyz="-0.08114 0.0073 -0.01746" rpy="0 3.14159 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.015.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+      <collision name="ProtoAssembly-MGv25.017">
+        <origin xyz="-0.09946 0.0107 -0.0169" rpy="0 3.14159 0"/>
+        <geometry>
+          <sphere radius="0.01984"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="leg_back_r_1">
+      <inertial>
+        <origin xyz="0.00272 -1e-05 0.03409" rpy="0 0 0"/>
+        <mass value="0.16"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.008">
+        <origin xyz="0.00272 -1e-05 0.03409" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.012.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_back_r_2">
+      <inertial>
+        <origin xyz="-0.04555 -0.00233 0.05745" rpy="0 0 0"/>
+        <mass value="0.02"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.006">
+        <origin xyz="-0.04555 -0.00233 0.05745" rpy="1.5708 1.5708 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.010.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_back_r_3">
+      <inertial>
+        <origin xyz="0.08114 -0.0073 0.01746" rpy="0 0 0"/>
+        <mass value="0.045"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.007">
+        <origin xyz="0.08114 -0.0073 0.01746" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.011.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+      <collision name="ProtoAssembly-MGv25.009">
+        <origin xyz="0.09946 -0.0107 0.0169" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="0.01984"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="leg_front_l_1">
+      <inertial>
+        <origin xyz="0.00263 8e-05 0.03455" rpy="0 0 0"/>
+        <mass value="0.16"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.012">
+        <origin xyz="0.00263 8e-05 0.03455" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.003.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_front_l_2">
+      <inertial>
+        <origin xyz="0.0461 0.00255 -0.05754" rpy="0 0 0"/>
+        <mass value="0.17"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.010">
+        <origin xyz="0.0461 0.00255 -0.05754" rpy="-1.5708 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.001.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_front_l_3">
+      <inertial>
+        <origin xyz="-0.08114 0.0073 -0.01746" rpy="0 0 0"/>
+        <mass value="0.045"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.011">
+        <origin xyz="-0.08114 0.0073 -0.01746" rpy="0 3.14159 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.002.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+      <collision name="ProtoAssembly-MGv25.013">
+        <origin xyz="-0.09946 0.0107 -0.0169" rpy="0 3.14159 0"/>
+        <geometry>
+          <sphere radius="0.01984"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="leg_front_r_1">
+      <inertial>
+        <origin xyz="0.00272 -1e-05 0.03409" rpy="0 0 0"/>
+        <mass value="0.16"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.003">
+        <origin xyz="0.00272 -1e-05 0.03409" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.007.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_front_r_2">
+      <inertial>
+        <origin xyz="-0.04555 -0.00233 0.05745" rpy="0 0 0"/>
+        <mass value="0.02"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="4e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.001">
+        <origin xyz="-0.04555 -0.00233 0.05745" rpy="1.5708 1.5708 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.005.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name="leg_front_r_3">
+      <inertial>
+        <origin xyz="0.08114 -0.0073 0.01746" rpy="0 0 0"/>
+        <mass value="0.045"/>
+        <inertia ixx="2e-05" ixy="0" ixz="0" iyy="2e-05" iyz="0" izz="2e-05"/>
+      </inertial>
+      <visual name="ProtoAssembly-MGv25.002">
+        <origin xyz="0.08114 -0.0073 0.01746" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.006.dae" scale="1.0 1.0 1.0"/>
+        </geometry>
+      </visual>
+      <collision name="ProtoAssembly-MGv25.005">
+        <origin xyz="0.09946 -0.0107 0.0169" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="0.01984"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="leg_back_l_1" type="revolute">
+      <origin xyz="-0.085 0.05 0" rpy="-1.5708 0 0"/>
+      <parent link="base_link"/>
+      <child link="leg_back_l_1"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-2.87979" upper="2.35619" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_back_l_2" type="revolute">
+      <origin xyz="0 0 0.038" rpy="1.5708 0 1.5708"/>
+      <parent link="leg_back_l_1"/>
+      <child link="leg_back_l_2"/>
+      <axis xyz="0 0 -1.0"/>
+      <limit lower="-1.5708" upper="0.69813" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_back_l_3" type="revolute">
+      <origin xyz="0.0607 0 -0.07062" rpy="1.5708 2.53073 0"/>
+      <parent link="leg_back_l_2"/>
+      <child link="leg_back_l_3"/>
+      <axis xyz="0 0 -1.0"/>
+      <limit lower="-1.20428" upper="3.14159" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_back_r_1" type="revolute">
+      <origin xyz="-0.085 -0.05 0" rpy="1.5708 0 0"/>
+      <parent link="base_link"/>
+      <child link="leg_back_r_1"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-2.35619" upper="2.87979" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_back_r_2" type="revolute">
+      <origin xyz="0 0 0.038" rpy="-1.5708 0 1.5708"/>
+      <parent link="leg_back_r_1"/>
+      <child link="leg_back_r_2"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-0.69813" upper="1.5708" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_back_r_3" type="revolute">
+      <origin xyz="-0.0607 0 0.07062" rpy="1.5708 2.53073 0"/>
+      <parent link="leg_back_r_2"/>
+      <child link="leg_back_r_3"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-3.14159" upper="1.20428" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_front_l_1" type="revolute">
+      <origin xyz="0.085 0.05 0" rpy="-1.5708 0 0"/>
+      <parent link="base_link"/>
+      <child link="leg_front_l_1"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-2.87979" upper="2.35619" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_front_l_2" type="revolute">
+      <origin xyz="0 0 0.038" rpy="1.5708 0 1.5708"/>
+      <parent link="leg_front_l_1"/>
+      <child link="leg_front_l_2"/>
+      <axis xyz="0 0 -1.0"/>
+      <limit lower="-1.5708" upper="0.69813" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_front_l_3" type="revolute">
+      <origin xyz="0.0607 0 -0.07062" rpy="1.5708 2.53073 0"/>
+      <parent link="leg_front_l_2"/>
+      <child link="leg_front_l_3"/>
+      <axis xyz="0 0 -1.0"/>
+      <limit lower="-1.20428" upper="3.14159" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_front_r_1" type="revolute">
+      <origin xyz="0.085 -0.05 0" rpy="1.5708 0 0"/>
+      <parent link="base_link"/>
+      <child link="leg_front_r_1"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-2.35619" upper="2.87979" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_front_r_2" type="revolute">
+      <origin xyz="0 0 0.038" rpy="-1.5708 0 1.5708"/>
+      <parent link="leg_front_r_1"/>
+      <child link="leg_front_r_2"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-0.69813" upper="1.5708" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+    <joint name="leg_front_r_3" type="revolute">
+      <origin xyz="-0.0607 0 0.07062" rpy="1.5708 2.53073 0"/>
+      <parent link="leg_front_r_2"/>
+      <child link="leg_front_r_3"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-3.14159" upper="1.20428" effort="3.7" velocity="47.12389"/>
+    </joint>
+
+  </robot>
