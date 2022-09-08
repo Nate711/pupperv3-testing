@@ -83,7 +83,9 @@ struct {
   int color = 0;
   int font = 0;
   int ui0 = 1;
-  int ui1 = 1;
+  // int ui1 = 1;
+  // int ui0 = 0;
+  int ui1 = 0;
   int help = 0;
   int info = 0;
   int profiler = 0;
@@ -1023,7 +1025,7 @@ void makesections(void) {
 
   // make
   makephysics(oldstate0[SECT_PHYSICS]);
-  makerendering(oldstate0[SECT_RENDERING]);
+  // makerendering(oldstate0[SECT_RENDERING]);
   makegroup(oldstate0[SECT_GROUP]);
   makejoint(oldstate1[SECT_JOINT]);
   makecontrol(oldstate1[SECT_CONTROL]);

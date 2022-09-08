@@ -3,3 +3,4 @@ install
 log
 **/.DS_Store
 .vscode
+**/build_dir
