@@ -131,6 +131,35 @@ void MOTOR_INTERFACE::command_velocity(CANChannel bus,
     send(bus, motor_id, {kCommandVelocity, 0, 0, 0, LSB, B1, B2, B3});
 }
 
+array<uint8_t, 8> pid_message(uint8_t command, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+{
+    return {command, 0, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki};
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::write_pid_rom(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+{
+    send(bus, motor_id, pid_message(kWritePIDToROM, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki));
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::write_pid_ram(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+{
+    send(bus, motor_id, pid_message(kWritePIDToRAM, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki));
+}
+
+TEMPLATE_HEADER
+void MOTOR_INTERFACE::write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+{
+    for (auto bus : motor_connections_)
+    {
+        for (int motor_id = 1; motor_id <= kServosPerChannel; motor_id++)
+        {
+            write_pid_ram(bus, motor_id, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
+        }
+    }
+}
+
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::command_stop(CANChannel bus, uint8_t motor_id)
 {

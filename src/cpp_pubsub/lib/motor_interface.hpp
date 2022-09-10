@@ -81,12 +81,18 @@ public:
     void request_multi_angle(CANChannel bus, uint8_t motor_id);
     void command_current(CANChannel bus, uint8_t motor_id, float current);
     void command_velocity(CANChannel bus, uint8_t motor_id, float velocity);
+    void write_pid_rom(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
+    void write_pid_ram(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
+    void write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
     void command_stop(CANChannel bus, uint8_t motor_id);
     void command_all_stop();
     void read_blocking(CANChannel bus);
     void start_read_threads();
     array<array<MotorData, kServosPerChannel>, kNumCANChannels> latest_data();
     MotorData motor_data_copy(CANChannel bus, uint8_t motor_id);
+
+    static const uint8_t kDefaultIqKp = 0x3C;
+    static const uint8_t kDefaultIqKi = 0x28;
 
 private:
     void initialize_bus(CANChannel bus);
@@ -131,6 +137,8 @@ private:
     const uint8_t kCommandCurrent = 0xA1;
     const uint8_t kCommandVelocity = 0xA2;
     const uint8_t kCommandStop = 0x81;
+    const uint8_t kWritePIDToROM = 0x32;
+    const uint8_t kWritePIDToRAM = 0x31;
     const float kDegsPerTick = 0.01;
     const float kSpeedReduction = 0.1;
 
