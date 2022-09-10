@@ -28,6 +28,9 @@
 
 using namespace std::chrono_literals;
 
+#define M_DEG_TO_RAD 0.01745329252
+#define M_GEAR_RATIO 0.10
+
 MotorControllerNode::MotorControllerNode(float rate,
                                          float position_kp,
                                          uint8_t speed_kp,
@@ -50,10 +53,10 @@ MotorControllerNode::MotorControllerNode(float rate,
     }
 
     // Node setup
-    // publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
-    // timer_ = this->create_wall_timer(
-    //     rclcpp::WallRate(publish_rate_).period(),
-    //     std::bind(&MotorControllerNode::publish_callback, this));
+    publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
+    timer_ = this->create_wall_timer(
+        rclcpp::WallRate(publish_rate_).period(),
+        std::bind(&MotorControllerNode::publish_callback, this));
 }
 MotorControllerNode::~MotorControllerNode()
 {
@@ -68,17 +71,17 @@ void MotorControllerNode::publish_callback()
     {
         for (int servo = 0; servo < K_SERVOS_PER_CHANNEL; servo++)
         {
-            std::cout << latest_data.at(bus).at(servo).multi_loop.multi_loop_angle << "\t";
+            std::cout << latest_data.at(bus).at(servo).common.multi_loop_angle << "\t";
         }
     }
     std::cout << std::endl;
     joint_state_message_.header.stamp = now();
-    joint_state_message_.position.at(0) = latest_data.at(0).at(0).multi_loop.multi_loop_angle;
-    joint_state_message_.position.at(1) = latest_data.at(0).at(1).multi_loop.multi_loop_angle;
-    joint_state_message_.position.at(2) = latest_data.at(0).at(2).multi_loop.multi_loop_angle;
-    joint_state_message_.position.at(3) = latest_data.at(0).at(3).multi_loop.multi_loop_angle;
-    joint_state_message_.position.at(4) = latest_data.at(0).at(4).multi_loop.multi_loop_angle;
-    joint_state_message_.position.at(5) = latest_data.at(0).at(5).multi_loop.multi_loop_angle;
+    joint_state_message_.position.at(0) = latest_data.at(0).at(0).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(1) = latest_data.at(0).at(1).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(2) = latest_data.at(0).at(2).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(3) = latest_data.at(0).at(3).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(4) = latest_data.at(0).at(4).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(5) = latest_data.at(0).at(5).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
 
     // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
     publisher_->publish(joint_state_message_);
