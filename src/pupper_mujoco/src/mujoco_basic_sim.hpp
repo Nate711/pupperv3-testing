@@ -26,10 +26,11 @@ class MujocoBasicSim
 {
 public:
     MujocoBasicSim();
+    ~MujocoBasicSim();
     void initialize(int argc, const char **argv);
     void step();
-    void end();
     bool should_close();
 
 private:
+    void end();
 };

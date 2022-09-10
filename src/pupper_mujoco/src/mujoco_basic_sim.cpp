@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <math.h>
 
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
@@ -147,10 +148,10 @@ void MujocoBasicSim::initialize(int argc, const char **argv)
     mjr_makeContext(m, &con, mjFONTSCALE_150);
 
     // install GLFW mouse and keyboard callbacks
-    // glfwSetKeyCallback(window, [this]() { this->keyboard });
+    glfwSetKeyCallback(window, keyboard);
     glfwSetCursorPosCallback(window, mouse_move);
-    // glfwSetMouseButtonCallback(window, mouse_button);
-    // glfwSetScrollCallback(window, scroll);
+    glfwSetMouseButtonCallback(window, mouse_button);
+    glfwSetScrollCallback(window, scroll);
 }
 
 void MujocoBasicSim::step()
@@ -164,7 +165,7 @@ void MujocoBasicSim::step()
     {
         // mj_step(m, d);
         mj_step1(m, d);
-        // d->ctrl[0] = 10;
+        d->ctrl[0] = std::sin(d->time);
         mj_step2(m, d);
         std::cout << d->time << std::endl;
     }
@@ -193,6 +194,11 @@ MujocoBasicSim::MujocoBasicSim()
 {
 }
 
+MujocoBasicSim::~MujocoBasicSim() {
+    std::cout << "ENDING" << std::endl;
+    end();
+}
+
 // main function
 int main(int argc, const char **argv)
 {
@@ -203,6 +209,5 @@ int main(int argc, const char **argv)
     {
         basic_sim.step();
     }
-    basic_sim.end();
     return 1;
 }
