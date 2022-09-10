@@ -10,6 +10,7 @@ public:
     void begin();
     void run(vector<array<float, kServosPerChannel>> goal_positions);
     MotorData motor_data_copy(CANChannel bus, uint8_t motor_id);
+    std::array<std::array<MotorData, kServosPerChannel>, kNumCANChannels> motor_data_copy();
 
 private:
     MotorInterface<kServosPerChannel> motor_interface_;

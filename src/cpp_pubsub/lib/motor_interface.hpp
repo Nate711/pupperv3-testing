@@ -24,15 +24,8 @@
 
 using namespace std;
 
-// const int kServosPerChannel = 6;
-const int kNumCANChannels = 4;
 
-const float kCurrentWriteMax = 32.0;
-const int kCurrentMultiplier = 2000;
-const int kCurrentRawReadMax = 2048;
-const float kCurrentReadMax = 33.0;
-const int kVelocityMultiplier = 100;
-const int kEncoderCountsPerRot = 65536;
+static const int kNumCANChannels = 4;
 
 enum class CANChannel
 {
@@ -151,4 +144,11 @@ private:
 
     // DEBUG ONLY
     chrono::system_clock::time_point debug_start_;
+
+    static constexpr float kCurrentWriteMax = 32.0;
+    static const int kCurrentMultiplier = 2000;
+    static const int kCurrentRawReadMax = 2048;
+    static constexpr float kCurrentReadMax = 33.0;
+    static const int kVelocityMultiplier = 100;
+    static const int kEncoderCountsPerRot = 65536;
 };

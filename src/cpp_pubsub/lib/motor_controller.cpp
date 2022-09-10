@@ -48,6 +48,12 @@ void MOTOR_CONTROLLER::run(vector<array<float, kServosPerChannel>> goal_position
 }
 
 TEMPLATE_HEADER
+std::array<std::array<MotorData, kServosPerChannel>, kNumCANChannels> MOTOR_CONTROLLER::motor_data_copy()
+{
+    return motor_interface_.latest_data();
+}
+
+TEMPLATE_HEADER
 MotorData MOTOR_CONTROLLER::motor_data_copy(CANChannel bus, uint8_t motor_id)
 {
     return motor_interface_.motor_data_copy(bus, motor_id);
