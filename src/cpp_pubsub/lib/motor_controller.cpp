@@ -9,17 +9,17 @@ TEMPLATE_HEADER
 MOTOR_CONTROLLER::MotorController(float position_kp,
                                   uint8_t speed_kp,
                                   float max_speed,
-                                  vector<CANChannel> motor_connections,
-                                  int bitrate) : motor_interface_(motor_connections, bitrate),
-                                                 position_kp_(position_kp),
-                                                 speed_kp_(speed_kp),
-                                                 max_speed_(max_speed)
+                                  vector<CANChannel> motor_connections) : motor_interface_(motor_connections),
+                                                                          position_kp_(position_kp),
+                                                                          speed_kp_(speed_kp),
+                                                                          max_speed_(max_speed)
 {
 }
 
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::begin()
 {
+    std::cout<<"Initializing motor controller." << std::endl;
     motor_interface_.initialize_canbuses();
     motor_interface_.initialize_motors();
     motor_interface_.start_read_threads();

@@ -31,17 +31,14 @@ using namespace std::chrono_literals;
 MotorControllerNode::MotorControllerNode(float rate,
                                          float position_kp,
                                          uint8_t speed_kp,
-                                         float max_speed,
-                                         int bitrate)
+                                         float max_speed)
     : Node("motor_controller_node"),
       publish_rate_(rate),
-      motor_controller_(position_kp, speed_kp, max_speed, kMotorConnections, bitrate)
+      motor_controller_(position_kp, speed_kp, max_speed, kMotorConnections)
 {
-    // Node setup
-    publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
-    timer_ = this->create_wall_timer(
-        rclcpp::WallRate(publish_rate_).period(),
-        std::bind(&MotorControllerNode::publish_callback, this));
+    // CAN interface setup
+    motor_controller_.begin();
+    std::cout << "Initialized motor controller." << std::endl;
 
     // Joint State joint_state_message_ setup
     for (std::string joint_name : joint_names_)
@@ -52,8 +49,11 @@ MotorControllerNode::MotorControllerNode(float rate,
         joint_state_message_.effort.push_back(0.0);
     }
 
-    // CAN interface setup
-    motor_controller_.begin();
+    // Node setup
+    // publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
+    // timer_ = this->create_wall_timer(
+    //     rclcpp::WallRate(publish_rate_).period(),
+    //     std::bind(&MotorControllerNode::publish_callback, this));
 }
 MotorControllerNode::~MotorControllerNode()
 {
@@ -61,8 +61,7 @@ MotorControllerNode::~MotorControllerNode()
 
 void MotorControllerNode::publish_callback()
 {
-    // motor_controller_.run({{0, 0, 0, 0, 0, 0}});
-    motor_controller_.run({{0.0}});
+    motor_controller_.run({{0, 0, 0, 0, 0, 0}});
 
     auto latest_data = motor_controller_.motor_data_copy();
     for (int bus = 0; bus < 1; bus++)
@@ -75,11 +74,11 @@ void MotorControllerNode::publish_callback()
     std::cout << std::endl;
     joint_state_message_.header.stamp = now();
     joint_state_message_.position.at(0) = latest_data.at(0).at(0).multi_loop.multi_loop_angle;
-    // joint_state_message_.position.at(1) = latest_data.at(0).at(1).multi_loop.multi_loop_angle;
-    // joint_state_message_.position.at(2) = latest_data.at(0).at(2).multi_loop.multi_loop_angle;
-    // joint_state_message_.position.at(3) = latest_data.at(0).at(3).multi_loop.multi_loop_angle;
-    // joint_state_message_.position.at(4) = latest_data.at(0).at(4).multi_loop.multi_loop_angle;
-    // joint_state_message_.position.at(5) = latest_data.at(0).at(5).multi_loop.multi_loop_angle;
+    joint_state_message_.position.at(1) = latest_data.at(0).at(1).multi_loop.multi_loop_angle;
+    joint_state_message_.position.at(2) = latest_data.at(0).at(2).multi_loop.multi_loop_angle;
+    joint_state_message_.position.at(3) = latest_data.at(0).at(3).multi_loop.multi_loop_angle;
+    joint_state_message_.position.at(4) = latest_data.at(0).at(4).multi_loop.multi_loop_angle;
+    joint_state_message_.position.at(5) = latest_data.at(0).at(5).multi_loop.multi_loop_angle;
 
     // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
     publisher_->publish(joint_state_message_);
@@ -98,9 +97,8 @@ int main(int argc, char *argv[])
     float position_kp = 50;
     uint8_t speed_kp = 0;
     float max_speed = 5000;
-    int bitrate = 1000000;
 
-    rclcpp::spin(std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed, bitrate));
+    rclcpp::spin(std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed));
     rclcpp::shutdown();
     return 0;
 }

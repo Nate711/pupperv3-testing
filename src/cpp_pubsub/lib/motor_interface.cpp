@@ -29,11 +29,9 @@ using namespace std;
 #define MOTOR_INTERFACE MotorInterface<kServosPerChannel>
 
 TEMPLATE_HEADER
-MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections,
-                                int bitrate) : motor_connections_(motor_connections),
-                                               bitrate_(bitrate),
-                                               initialized_(false),
-                                               should_read_(true)
+MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections) : motor_connections_(motor_connections),
+                                                                        initialized_(false),
+                                                                        should_read_(true)
 {
     // DEBUG ONLY
     debug_start_ = time_now();
@@ -313,6 +311,7 @@ void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame)
     if (command_id == kGetMultiAngle)
     {
         multi_angle_update(bus, motor_id_, frame);
+        cout << "got multi angle" << endl;
     }
     if (command_id == kCommandCurrent || command_id == kCommandVelocity)
     {
@@ -335,6 +334,7 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     int s;
     struct sockaddr_can addr;
     struct ifreq ifr;
+    cout << "Initializing " << channel_str(bus) << "." << endl;
     if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
     {
         cerr << "socket";
@@ -350,7 +350,7 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
-    cout << channel_str(bus) << " ifindex: " << addr.can_ifindex << endl;
+    cout << "Found: " << channel_str(bus) << " ifindex: " << addr.can_ifindex << endl;
 
     // bind socket
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)

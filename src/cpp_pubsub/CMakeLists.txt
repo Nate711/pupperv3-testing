@@ -23,6 +23,10 @@ add_executable(talker src/joint_state_publisher.cpp)
 target_link_libraries(talker motor_interface)
 ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
 
+add_executable(motor_controller_node src/motor_controller_node.cpp)
+target_link_libraries(motor_controller_node motor_controller)
+ament_target_dependencies(motor_controller_node rclcpp std_msgs sensor_msgs)
+
 add_executable(can_test src/can_test.cpp)
 target_link_libraries(can_test motor_interface)
 
@@ -46,6 +50,10 @@ install(TARGETS
   
 install(TARGETS
     motor_controller_test
+    DESTINATION lib/${PROJECT_NAME})
+  
+install(TARGETS
+    motor_controller_node
     DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

@@ -17,7 +17,7 @@ int main()
     signal(SIGINT, sigint_handler);
 
     // TODO: Replace with make_unique after resolving argument list error
-    auto motor_interface = unique_ptr<MotorInterface<K_SERVOS_PER_CHANNEL>>(new MotorInterface<K_SERVOS_PER_CHANNEL>({CANChannel::CAN0, CANChannel::CAN1}, /*bitrate=*/1000000));
+    auto motor_interface = unique_ptr<MotorInterface<K_SERVOS_PER_CHANNEL>>(new MotorInterface<K_SERVOS_PER_CHANNEL>({CANChannel::CAN0, CANChannel::CAN1}));
     motor_interface->initialize_canbuses();
     motor_interface->initialize_motors(); // not needed if you just want angles
     motor_interface->start_read_threads();

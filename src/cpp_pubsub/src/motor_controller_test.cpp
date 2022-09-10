@@ -27,14 +27,13 @@ int main(int argc, char *argv[])
     signal(SIGINT, sigint_handler);
 
     // Create position controller
-    MotorController<K_SERVOS_PER_CHANNEL> controller(/*position_kp (dps per deg)=*/50.0,
-                                  /*speed_kp=*/1,
-                                  /*max_speed (dps)=*/5000.0,
-                                  /*can channels*/ {CANChannel::CAN0},
-                                  /*bitrate=*/1000000);
-    controller.begin();
-    cout << "Initialized controller." << endl;
-    vector<array<float, K_SERVOS_PER_CHANNEL>> goal_positions = {{0,}};
+    shared_ptr<MotorController<K_SERVOS_PER_CHANNEL>> controller(new MotorController<K_SERVOS_PER_CHANNEL>(/*position_kp (dps per deg)=*/50.0,
+                                                                                                           /*speed_kp=*/1,
+                                                                                                           /*max_speed (dps)=*/5000.0,
+                                                                                                           /*can channels*/ {CANChannel::CAN0}));
+    controller->begin();
+    std::cout << "Initialized controller." << endl;
+    vector<array<float, K_SERVOS_PER_CHANNEL>> goal_positions = {{0}};
 
     // Boiler plate
     auto loop_start = time_now();
@@ -45,24 +44,24 @@ int main(int argc, char *argv[])
         auto loop_now = time_now();
         if (loop_count % PRINT_CYCLE == 0)
         {
-            cout << "\nSince start (us): " << duration_ms(loop_now - loop_start) << "\t";
-            cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
+            std::cout << "\nSince start (us): " << duration_ms(loop_now - loop_start) << "\t";
+            std::cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
         }
         last_loop_ts = loop_now;
 
-        float amp = 0.0;//450.0; // 90 deg sweep at output
+        float amp = 0.0; // 450.0; // 90 deg sweep at output
         float secs_since_start = duration_ms(loop_now - loop_start) / 1000000.0;
         // float freq = secs_since_start / 2.0; // chirp signal
         float freq = 2.0;
         float sample = std::sin(secs_since_start * 2 * M_PI * freq);
         // Set desired positions
         goal_positions.at(0).at(0) = amp * sample;
-        controller.run(goal_positions);
+        controller->run(goal_positions);
 
         if (loop_count % PRINT_CYCLE == 0)
         {
-            auto common = controller.motor_data_copy(CANChannel::CAN0, 1).common;
-            cout << common.current << "\t" << common.multi_loop_angle << "\t";
+            auto common = controller->motor_data_copy(CANChannel::CAN0, 1).common;
+            std::cout << common.current << "\t" << common.multi_loop_angle << "\t";
         }
 
         usleep(sleep_us);

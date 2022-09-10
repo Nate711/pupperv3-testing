@@ -66,7 +66,7 @@ template <int kServosPerChannel>
 class MotorInterface
 {
 public:
-    MotorInterface(vector<CANChannel> motor_connections, int bitrate);
+    MotorInterface(vector<CANChannel> motor_connections);
     ~MotorInterface();
     void initialize_canbuses();
     void close_canbuses();
@@ -119,7 +119,6 @@ private:
     }
     array<int, 4> canbus_to_fd_;
     vector<CANChannel> motor_connections_;
-    const int bitrate_;
     bool initialized_;
     atomic<bool> should_read_;
 

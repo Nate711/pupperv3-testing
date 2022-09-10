@@ -53,7 +53,7 @@ public:
         }
 
         // CAN interface setup
-        motor_interface_ = std::make_unique<MotorInterface<K_SERVOS_PER_CHANNEL>>(kMotorConnections, kBitrate);
+        motor_interface_ = std::make_unique<MotorInterface<K_SERVOS_PER_CHANNEL>>(kMotorConnections);
         motor_interface_->initialize_canbuses();
         motor_interface_->initialize_motors(); // not needed if you just want angles
         motor_interface_->start_read_threads();
@@ -121,7 +121,6 @@ private:
 
     // std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
     std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0};
-    int kBitrate = 1000000;
     std::unique_ptr<MotorInterface<K_SERVOS_PER_CHANNEL>> motor_interface_;
 };
 

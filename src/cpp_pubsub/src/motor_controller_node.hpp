@@ -27,7 +27,9 @@
 
 #include "motor_controller.hpp"
 
-#define K_SERVOS_PER_CHANNEL 1
+#define K_SERVOS_PER_CHANNEL 6
+
+const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0};
 
 /* This example creates a subclass of Node and uses std::bind() to register a
  * member function as a callback from the timer. */
@@ -38,8 +40,7 @@ public:
     MotorControllerNode(float rate,
                         float position_kp,
                         uint8_t speed_kp,
-                        float max_speed,
-                        int bitrate);
+                        float max_speed);
     ~MotorControllerNode();
 
 private:
@@ -64,6 +65,4 @@ private:
     };
     const float publish_rate_;
     MotorController<K_SERVOS_PER_CHANNEL> motor_controller_;
-
-    const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0};
 };
