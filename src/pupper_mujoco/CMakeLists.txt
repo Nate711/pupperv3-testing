@@ -5,11 +5,16 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+add_compile_options(-g)
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(mujoco REQUIRED)
-find_package(glfw3 REQUIRED)
 
+include_directories(${CMAKE_SOURCE_DIR}/lib)
 
 # DOES NOT WORK
 # LINKER CANNOT FIND libmujoco.so.2.2.1
@@ -32,12 +37,21 @@ target_link_libraries(simulate mujoco::mujoco glfw)
 add_executable(basic src/basic.cc)
 target_link_libraries(basic mujoco::mujoco glfw)
 
-add_executable(basic_sim src/mujoco_basic_sim.cpp)
+add_library(basic_sim lib/basic_sim.cpp)
 target_link_libraries(basic_sim mujoco::mujoco glfw)
 
+add_executable(basic_sim_test src/basic_sim_test.cpp)
+target_link_libraries(basic_sim_test mujoco::mujoco glfw basic_sim)
+
+add_executable(basic_sim_node src/basic_sim_node.cpp)
+target_link_libraries(basic_sim_node mujoco::mujoco glfw basic_sim)
+ament_target_dependencies(basic_sim_node rclcpp std_msgs sensor_msgs)
+
 install(TARGETS basic DESTINATION lib/${PROJECT_NAME})
-install(TARGETS basic_sim DESTINATION lib/${PROJECT_NAME})
+install(TARGETS basic_sim_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS simulate DESTINATION lib/${PROJECT_NAME})
+install(TARGETS basic_sim_node DESTINATION lib/${PROJECT_NAME})
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

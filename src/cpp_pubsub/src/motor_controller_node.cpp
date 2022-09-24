@@ -58,13 +58,14 @@ MotorControllerNode::MotorControllerNode(float rate,
         rclcpp::WallRate(publish_rate_).period(),
         std::bind(&MotorControllerNode::publish_callback, this));
 }
+
 MotorControllerNode::~MotorControllerNode()
 {
 }
 
 void MotorControllerNode::publish_callback()
 {
-    motor_controller_.run({{0, 0, 0, 0, 0, 0}});
+    motor_controller_.run({{0, 0, 0, 0, 0, 0}}); // must be running to get motor feedback
 
     auto latest_data = motor_controller_.motor_data_copy();
     for (int bus = 0; bus < 1; bus++)
