@@ -2,6 +2,8 @@
 #define MUJOCO_BASIC_SIM
 
 #include <array>
+#include <GLFW/glfw3.h>
+#include <mujoco/mujoco.h>
 
 const int kNumActuators = 12;
 
@@ -29,6 +31,10 @@ public:
 
 private:
     void end();
+    GLFWwindow *window_;
+    mjvOption opt_;  // visualization options
+    mjrContext con_; // custom GPU context
+
     const bool fixed_base_;
     const int orientation_vars = 4;
     const int position_vars = 3;

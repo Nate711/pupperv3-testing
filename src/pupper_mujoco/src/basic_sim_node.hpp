@@ -17,8 +17,11 @@ private:
     void actuator_control_callback(const std_msgs::msg::String &msg);
     void render();
     void single_step();
+    void render_thread();
 
     MujocoBasicSim basic_sim_;
+    std::thread render_thread_;
+    
     // Physics step timer
     const float kPhysicsRate = 1000.0;
     rclcpp::TimerBase::SharedPtr physics_timer_;

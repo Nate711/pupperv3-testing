@@ -8,6 +8,9 @@ BasicSimNode::BasicSimNode(bool fixed_base, float publish_rate) : Node("basic_si
 {
     basic_sim_.initialize("/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3.xml");
 
+    // This doesn't segfault but produces black screen
+    // render_thread_ = std::thread(std::bind(&BasicSimNode::render_thread, this));
+
     // Initialize persistent joint state message
     for (std::string joint_name : joint_names_)
     {
@@ -18,14 +21,14 @@ BasicSimNode::BasicSimNode(bool fixed_base, float publish_rate) : Node("basic_si
     }
 
     // causes double free / corruption when hit with control c
-    // physics_timer_ = this->create_wall_timer(
-    //     rclcpp::WallRate(kPhysicsRate).period(),
-    //     std::bind(&BasicSimNode::single_step, this));
+    physics_timer_ = this->create_wall_timer(
+        rclcpp::WallRate(kPhysicsRate).period(),
+        std::bind(&BasicSimNode::single_step, this));
 
     // // causes segmentation fault
-    // render_timer_ = this->create_wall_timer(
-    //     rclcpp::WallRate(kRenderRate).period(),
-    //     std::bind(&BasicSimNode::render, this));
+    render_timer_ = this->create_wall_timer(
+        rclcpp::WallRate(kRenderRate).period(),
+        std::bind(&BasicSimNode::render, this));
 
     publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
     timer_ = this->create_wall_timer(
@@ -38,6 +41,14 @@ BasicSimNode::BasicSimNode(bool fixed_base, float publish_rate) : Node("basic_si
         std::bind(&BasicSimNode::actuator_control_callback, this, _1));
 }
 
+
+void BasicSimNode::render_thread() {
+    while (!basic_sim_.should_close())
+    {
+        basic_sim_.step_and_render();
+    }
+}
+
 void BasicSimNode::render() {
     basic_sim_.render();
 }
@@ -48,8 +59,8 @@ void BasicSimNode::single_step() {
 
 void BasicSimNode::publish_callback()
 {
-    single_step(); // runs twice and then dies
-    render(); // causes segmentation fault with genderGeom and then /usr/lib/aarch64-linux-gnu/dri/virtio_gpu_dri.so
+    // single_step(); // runs twice and then dies
+    // render(); // causes segmentation fault with genderGeom and then /usr/lib/aarch64-linux-gnu/dri/virtio_gpu_dri.so
 
 
     joint_state_message_.header.stamp = now();

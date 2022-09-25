@@ -20,9 +20,8 @@ double lasty = 0;
 
 mjvScene scn;   // abstract scene
 mjvCamera cam;  // abstract camera
-mjvOption opt;  // visualization options
-mjrContext con; // custom GPU context
-GLFWwindow *window;
+// mjvOption opt;  // visualization options
+// mjrContext con; // custom GPU context
 
 // keyboard callback
 void keyboard(GLFWwindow *window, int key, int scancode, int act, int mods)
@@ -100,7 +99,7 @@ void MujocoBasicSim::end()
 {
     // free visualization storage
     mjv_freeScene(&scn);
-    mjr_freeContext(&con);
+    mjr_freeContext(&con_);
 
     // free MuJoCo model and data
     mj_deleteData(data);
@@ -142,25 +141,25 @@ void MujocoBasicSim::initialize(const char *model_file)
     }
 
     // create window, make OpenGL context current, request v-sync
-    window = glfwCreateWindow(1200, 900, "Demo", NULL, NULL);
-    glfwMakeContextCurrent(window);
+    window_ = glfwCreateWindow(1200, 900, "Demo", NULL, NULL);
+    glfwMakeContextCurrent(window_);
     glfwSwapInterval(1);
 
     // initialize visualization data structures
     mjv_defaultCamera(&cam);
-    mjv_defaultOption(&opt);
+    mjv_defaultOption(&opt_);
     mjv_defaultScene(&scn);
-    mjr_defaultContext(&con);
+    mjr_defaultContext(&con_);
 
     // create scene and context
     mjv_makeScene(model, &scn, 2000);
-    mjr_makeContext(model, &con, mjFONTSCALE_150);
+    mjr_makeContext(model, &con_, mjFONTSCALE_150);
 
     // install GLFW mouse and keyboard callbacks
-    glfwSetKeyCallback(window, keyboard);
-    glfwSetCursorPosCallback(window, mouse_move);
-    glfwSetMouseButtonCallback(window, mouse_button);
-    glfwSetScrollCallback(window, scroll);
+    glfwSetKeyCallback(window_, keyboard);
+    glfwSetCursorPosCallback(window_, mouse_move);
+    glfwSetMouseButtonCallback(window_, mouse_button);
+    glfwSetScrollCallback(window_, scroll);
 }
 
 void MujocoBasicSim::single_step()
@@ -177,16 +176,17 @@ void MujocoBasicSim::single_step()
 
 void MujocoBasicSim::render()
 {
+    std::cout << "Rendering" << std::endl;
     // get framebuffer viewport
     mjrRect viewport = {0, 0, 0, 0};
-    glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
+    glfwGetFramebufferSize(window_, &viewport.width, &viewport.height);
 
     // update scene and render
-    mjv_updateScene(model, data, &opt, NULL, &cam, mjCAT_ALL, &scn);
-    mjr_render(viewport, &scn, &con);
+    mjv_updateScene(model, data, &opt_, NULL, &cam, mjCAT_ALL, &scn);
+    mjr_render(viewport, &scn, &con_);
 
     // swap OpenGL buffers (blocking call due to v-sync)
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(window_);
 
     // process pending GUI events, call GLFW callbacks
     glfwPollEvents();
@@ -208,7 +208,7 @@ void MujocoBasicSim::step_and_render()
 
 bool MujocoBasicSim::should_close()
 {
-    return glfwWindowShouldClose(window);
+    return glfwWindowShouldClose(window_);
 }
 
 void MujocoBasicSim::set_actuator_torques(std::array<float, kNumActuators> torques)
