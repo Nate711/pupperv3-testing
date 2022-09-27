@@ -18,8 +18,8 @@ bool button_right = false;
 double lastx = 0;
 double lasty = 0;
 
-mjvScene scn;   // abstract scene
-mjvCamera cam;  // abstract camera
+mjvScene scn;  // abstract scene
+mjvCamera cam; // abstract camera
 // mjvOption opt;  // visualization options
 // mjrContext con; // custom GPU context
 
@@ -95,7 +95,7 @@ void scroll(GLFWwindow *window, double xoffset, double yoffset)
     mjv_moveCamera(model, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
 }
 
-void MujocoBasicSim::end()
+void BasicSim::end()
 {
     // free visualization storage
     mjv_freeScene(&scn);
@@ -111,7 +111,7 @@ void MujocoBasicSim::end()
 #endif
 }
 
-void MujocoBasicSim::initialize(const char *model_file)
+void BasicSim::initialize(const char *model_file)
 {
     // load and compile model
     char error[1000] = "Could not load binary model";
@@ -162,11 +162,11 @@ void MujocoBasicSim::initialize(const char *model_file)
     glfwSetScrollCallback(window_, scroll);
 }
 
-void MujocoBasicSim::single_step()
+void BasicSim::single_step()
 {
     // mj_step(model, data); better when using actuation model
     mj_step1(model, data);
-    for (int i = 0; i < kNumActuators; i++)
+    for (int i = 0; i < BasicSim::kNumActuators; i++)
     {
         data->ctrl[i] = actuator_torques_.at(i); // apply latest control values
     }
@@ -174,7 +174,7 @@ void MujocoBasicSim::single_step()
     std::cout << "Sim time: " << data->time << std::endl;
 }
 
-void MujocoBasicSim::render()
+void BasicSim::render()
 {
     std::cout << "Rendering" << std::endl;
     // get framebuffer viewport
@@ -192,7 +192,7 @@ void MujocoBasicSim::render()
     glfwPollEvents();
 }
 
-void MujocoBasicSim::step_and_render()
+void BasicSim::step_and_render()
 {
     // advance interactive simulation for 1/60 sec
     //  Assuming MuJoCo can simulate faster than real-time, which it usually can,
@@ -206,35 +206,37 @@ void MujocoBasicSim::step_and_render()
     render();
 }
 
-bool MujocoBasicSim::should_close()
+bool BasicSim::should_close()
 {
     return glfwWindowShouldClose(window_);
 }
 
-void MujocoBasicSim::set_actuator_torques(std::array<float, kNumActuators> torques)
+void BasicSim::set_actuator_torques(std::array<float, BasicSim::kNumActuators> torques)
 {
     actuator_torques_ = torques;
 }
 
-std::array<float, kNumActuators> MujocoBasicSim::actuator_positions()
+std::array<float, BasicSim::kNumActuators> BasicSim::actuator_positions() const
 {
-    std::array<float, kNumActuators> positions;
-    for (int i = 7; i < 7 + kNumActuators; i++)
+    std::array<float, BasicSim::kNumActuators> positions;
+    int start_idx = fixed_base_ ? 0 : kOrientationVars + kPositionVars;
+    for (int i = 0; i < BasicSim::kNumActuators; i++)
     {
-        positions.at(i - 7) = data->qpos[i];
+        positions.at(i) = data->qpos[i + start_idx];
     }
     return positions;
 }
-std::array<float, kNumActuators> MujocoBasicSim::actuator_velocities()
+std::array<float, BasicSim::kNumActuators> BasicSim::actuator_velocities() const
 {
-    std::array<float, kNumActuators> velocities;
-    for (int i = 6; i < 6 + kNumActuators; i++)
+    std::array<float, BasicSim::kNumActuators> velocities;
+    int start_idx = fixed_base_ ? 0 : 6;
+    for (int i = 0; i < BasicSim::kNumActuators; i++)
     {
-        velocities.at(i - 6) = data->qvel[i];
+        velocities.at(i) = data->qvel[i + start_idx];
     }
     return velocities;
 }
-std::array<float, 4> MujocoBasicSim::base_orientation()
+std::array<float, 4> BasicSim::base_orientation() const
 {
     if (fixed_base_)
     {
@@ -245,7 +247,7 @@ std::array<float, 4> MujocoBasicSim::base_orientation()
         return {data->qpos[0], data->qpos[1], data->qpos[2], data->qpos[3]};
     }
 }
-std::array<float, 3> MujocoBasicSim::base_position()
+std::array<float, 3> BasicSim::base_position() const
 {
     if (fixed_base_)
     {
@@ -256,7 +258,7 @@ std::array<float, 3> MujocoBasicSim::base_position()
         return {data->qpos[4], data->qpos[5], data->qpos[6]};
     }
 }
-std::array<float, 3> MujocoBasicSim::base_angular_velocity()
+std::array<float, 3> BasicSim::base_angular_velocity() const
 {
     if (fixed_base_)
     {
@@ -267,7 +269,7 @@ std::array<float, 3> MujocoBasicSim::base_angular_velocity()
         return {data->qvel[0], data->qvel[1], data->qvel[2]};
     }
 }
-std::array<float, 3> MujocoBasicSim::base_velocity()
+std::array<float, 3> BasicSim::base_velocity() const
 {
     if (fixed_base_)
     {
@@ -279,12 +281,17 @@ std::array<float, 3> MujocoBasicSim::base_velocity()
     }
 }
 
-MujocoBasicSim::MujocoBasicSim(bool fixed_base) : fixed_base_(fixed_base)
+float BasicSim::sim_time() const
+{
+    return data->time;
+}
+
+BasicSim::BasicSim(bool fixed_base) : fixed_base_(fixed_base)
 {
     actuator_torques_.fill(0.0);
 }
 
-MujocoBasicSim::~MujocoBasicSim()
+BasicSim::~BasicSim()
 {
     std::cout << "ENDING" << std::endl;
     end();

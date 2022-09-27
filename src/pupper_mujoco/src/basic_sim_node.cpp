@@ -6,11 +6,14 @@ BasicSimNode::BasicSimNode(bool fixed_base, float publish_rate) : Node("basic_si
                                                                   basic_sim_(fixed_base),
                                                                   publish_rate_(publish_rate)
 {
-    basic_sim_.initialize("/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3.xml");
-
-    // This doesn't segfault but produces black screen
-    // render_thread_ = std::thread(std::bind(&BasicSimNode::render_thread, this));
-
+    if (fixed_base)
+    {
+        basic_sim_.initialize("/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_fixed_base.xml");
+    }
+    else
+    {
+        basic_sim_.initialize("/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_floating_base.xml");
+    }
     // Initialize persistent joint state message
     for (std::string joint_name : joint_names_)
     {
@@ -20,12 +23,10 @@ BasicSimNode::BasicSimNode(bool fixed_base, float publish_rate) : Node("basic_si
         joint_state_message_.effort.push_back(0.0);
     }
 
-    // causes double free / corruption when hit with control c
     physics_timer_ = this->create_wall_timer(
         rclcpp::WallRate(kPhysicsRate).period(),
         std::bind(&BasicSimNode::single_step, this));
 
-    // // causes segmentation fault
     render_timer_ = this->create_wall_timer(
         rclcpp::WallRate(kRenderRate).period(),
         std::bind(&BasicSimNode::render, this));
@@ -41,35 +42,57 @@ BasicSimNode::BasicSimNode(bool fixed_base, float publish_rate) : Node("basic_si
         std::bind(&BasicSimNode::actuator_control_callback, this, _1));
 }
 
-
-void BasicSimNode::render_thread() {
+void BasicSimNode::render_thread()
+{
     while (!basic_sim_.should_close())
     {
         basic_sim_.step_and_render();
     }
 }
 
-void BasicSimNode::render() {
+void BasicSimNode::render()
+{
     basic_sim_.render();
 }
 
-void BasicSimNode::single_step() {
+void BasicSimNode::single_step()
+{
+    // debug only
+    basic_sim_.set_actuator_torques({
+        std::sin(basic_sim_.sim_time() * 2),
+        0.0,
+        0.0,
+        std::cos(basic_sim_.sim_time() * 2),
+        0.0,
+        0.0,
+        std::sin(basic_sim_.sim_time() * 2),
+        0.0,
+        0.0,
+        std::cos(basic_sim_.sim_time() * 2),
+        0.0,
+        0.0,
+    });
+
     basic_sim_.single_step();
 }
 
 void BasicSimNode::publish_callback()
 {
-    // single_step(); // runs twice and then dies
-    // render(); // causes segmentation fault with genderGeom and then /usr/lib/aarch64-linux-gnu/dri/virtio_gpu_dri.so
-
-
     joint_state_message_.header.stamp = now();
-    std::copy(std::begin(basic_sim_.actuator_positions()),
-              std::end(basic_sim_.actuator_positions()),
-              std::begin(joint_state_message_.position));
-    std::copy(std::begin(basic_sim_.actuator_velocities()),
-              std::end(basic_sim_.actuator_velocities()),
-              std::begin(joint_state_message_.velocity));
+    for (int i = 0; i < basic_sim_.actuator_positions().size(); i++)
+    {
+        joint_state_message_.position.at(i) = basic_sim_.actuator_positions().at(i);
+        joint_state_message_.velocity.at(i) = basic_sim_.actuator_velocities().at(i);
+    }
+
+    // Causes double free or corruption when ctrl-c physics step
+    // And segmentation fault on rendering
+    // std::copy(std::begin(basic_sim_.actuator_positions()),
+    //           std::end(basic_sim_.actuator_positions()),
+    //           std::begin(joint_state_message_.position));
+    // std::copy(std::begin(basic_sim_.actuator_velocities()),
+    //           std::end(basic_sim_.actuator_velocities()),
+    //           std::begin(joint_state_message_.velocity));
 
     publisher_->publish(joint_state_message_);
 }
@@ -101,7 +124,7 @@ int main(int argc, char *argv[])
      */
     rclcpp::init(argc, argv);
     bool fixed_base = true;
-    float publish_rate = 500.0;
+    float publish_rate = 50.0;
     rclcpp::spin(std::make_shared<BasicSimNode>(/*fixed_base=*/fixed_base, /*publish_rate=*/publish_rate));
     rclcpp::shutdown();
     return 0;

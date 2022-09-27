@@ -19,11 +19,11 @@ private:
     void single_step();
     void render_thread();
 
-    MujocoBasicSim basic_sim_;
+    BasicSim basic_sim_;
     std::thread render_thread_;
     
     // Physics step timer
-    const float kPhysicsRate = 1000.0;
+    const float kPhysicsRate = 500.0;
     rclcpp::TimerBase::SharedPtr physics_timer_;
     const float kRenderRate = 60.0;
     rclcpp::TimerBase::SharedPtr render_timer_;
@@ -42,12 +42,12 @@ private:
         "leg_front_r_1",
         "leg_front_r_2",
         "leg_front_r_3",
-        "leg_back_r_1",
-        "leg_back_r_2",
-        "leg_back_r_3",
         "leg_front_l_1",
         "leg_front_l_2",
         "leg_front_l_3",
+        "leg_back_r_1",
+        "leg_back_r_2",
+        "leg_back_r_3",
         "leg_back_l_1",
         "leg_back_l_2",
         "leg_back_l_3",

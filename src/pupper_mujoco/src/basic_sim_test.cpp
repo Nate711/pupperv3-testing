@@ -5,7 +5,7 @@
 // main function
 int main(int argc, const char **argv)
 {
-    MujocoBasicSim basic_sim(true);
+    BasicSim basic_sim(true);
     // check command-line arguments
     // if (argc != 2)
     // {
