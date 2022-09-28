@@ -211,14 +211,14 @@ bool BasicSim::should_close()
     return glfwWindowShouldClose(window_);
 }
 
-void BasicSim::set_actuator_torques(std::array<float, BasicSim::kNumActuators> torques)
+void BasicSim::set_actuator_torques(std::array<double, BasicSim::kNumActuators> torques)
 {
     actuator_torques_ = torques;
 }
 
-std::array<float, BasicSim::kNumActuators> BasicSim::actuator_positions() const
+std::array<double, BasicSim::kNumActuators> BasicSim::actuator_positions() const
 {
-    std::array<float, BasicSim::kNumActuators> positions;
+    std::array<double, BasicSim::kNumActuators> positions;
     int start_idx = fixed_base_ ? 0 : kOrientationVars + kPositionVars;
     for (int i = 0; i < BasicSim::kNumActuators; i++)
     {
@@ -226,9 +226,9 @@ std::array<float, BasicSim::kNumActuators> BasicSim::actuator_positions() const
     }
     return positions;
 }
-std::array<float, BasicSim::kNumActuators> BasicSim::actuator_velocities() const
+std::array<double, BasicSim::kNumActuators> BasicSim::actuator_velocities() const
 {
-    std::array<float, BasicSim::kNumActuators> velocities;
+    std::array<double, BasicSim::kNumActuators> velocities;
     int start_idx = fixed_base_ ? 0 : 6;
     for (int i = 0; i < BasicSim::kNumActuators; i++)
     {
@@ -236,7 +236,7 @@ std::array<float, BasicSim::kNumActuators> BasicSim::actuator_velocities() const
     }
     return velocities;
 }
-std::array<float, 4> BasicSim::base_orientation() const
+std::array<double, 4> BasicSim::base_orientation() const
 {
     if (fixed_base_)
     {
@@ -247,7 +247,7 @@ std::array<float, 4> BasicSim::base_orientation() const
         return {data->qpos[0], data->qpos[1], data->qpos[2], data->qpos[3]};
     }
 }
-std::array<float, 3> BasicSim::base_position() const
+std::array<double, 3> BasicSim::base_position() const
 {
     if (fixed_base_)
     {
@@ -258,7 +258,7 @@ std::array<float, 3> BasicSim::base_position() const
         return {data->qpos[4], data->qpos[5], data->qpos[6]};
     }
 }
-std::array<float, 3> BasicSim::base_angular_velocity() const
+std::array<double, 3> BasicSim::base_angular_velocity() const
 {
     if (fixed_base_)
     {
@@ -269,7 +269,7 @@ std::array<float, 3> BasicSim::base_angular_velocity() const
         return {data->qvel[0], data->qvel[1], data->qvel[2]};
     }
 }
-std::array<float, 3> BasicSim::base_velocity() const
+std::array<double, 3> BasicSim::base_velocity() const
 {
     if (fixed_base_)
     {
@@ -281,7 +281,7 @@ std::array<float, 3> BasicSim::base_velocity() const
     }
 }
 
-float BasicSim::sim_time() const
+double BasicSim::sim_time() const
 {
     return data->time;
 }
