@@ -9,7 +9,10 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
  
   # Set the path to this package.
-  pkg_share = FindPackageShare(package='pupper_v3').find('pupper_v3')
+  pkg_share = FindPackageShare(package='pupper_rviz').find('pupper_rviz')
+  print("\n\n\n")
+  print(pkg_share)
+  print("\n\n\n")
  
   # Set the path to the RViz configuration settings
   default_rviz_config_path = os.path.join(pkg_share, 'rviz/rviz_basic_settings.rviz')
