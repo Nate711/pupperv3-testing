@@ -23,7 +23,7 @@ private:
     const int kOrientationVars = 4;
     const int kPositionVars = 3;
     static const int kNumActuators = 12;
-    std::array<float, kNumActuators> actuator_torques_;
+    std::array<double, kNumActuators> actuator_torques_;
 
 public:
     BasicSim(bool fixed_base);
@@ -33,14 +33,14 @@ public:
     void render();
     void step_and_render();
     bool should_close();
-    void set_actuator_torques(std::array<float, kNumActuators> torques);
-    float sim_time() const;
-    std::array<float, kNumActuators> actuator_positions() const;
-    std::array<float, kNumActuators> actuator_velocities() const;
-    std::array<float, 3> base_position() const;
-    std::array<float, 4> base_orientation() const;
-    std::array<float, 3> base_velocity() const;
-    std::array<float, 3> base_angular_velocity() const;
+    void set_actuator_torques(std::array<double, kNumActuators> torques);
+    double sim_time() const;
+    std::array<double, kNumActuators> actuator_positions() const;
+    std::array<double, kNumActuators> actuator_velocities() const;
+    std::array<double, 3> base_position() const;
+    std::array<double, 4> base_orientation() const;
+    std::array<double, 3> base_velocity() const;
+    std::array<double, 3> base_angular_velocity() const;
 };
 
 #endif
