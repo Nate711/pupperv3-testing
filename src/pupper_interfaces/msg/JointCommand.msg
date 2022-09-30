@@ -1,8 +1,8 @@
 std_msgs/Header header
 
-string[] name
-float64[] kp
-float64[] kd
-float64[] position_target
-float64[] velocity_target
-float64[] torque_feedforward
+string[12] name
+float64[12] kp
+float64[12] kd
+float64[12] position_target
+float64[12] velocity_target
+float64[12] feedforward_torque

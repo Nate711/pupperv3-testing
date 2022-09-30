@@ -5,7 +5,7 @@
 // main function
 int main(int argc, const char **argv)
 {
-    BasicSim basic_sim(true);
+    BasicSim basic_sim(true, 0.002);
     // check command-line arguments
     // if (argc != 2)
     // {

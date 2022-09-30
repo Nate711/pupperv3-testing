@@ -4,9 +4,14 @@
 #include <cstring>
 #include <iostream>
 #include <math.h>
+#include <iomanip>
 
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
+
+#include "constants.hpp"
+
+// #define BASIC_SIM_DEBUG
 
 mjModel *model = NULL; // MuJoCo model
 mjData *data = NULL;   // MuJoCo data
@@ -132,7 +137,7 @@ void BasicSim::initialize(const char *model_file)
     data = mj_makeData(model);
 
     // set dt
-    // model->opt.timestep = 0.0001;
+    model->opt.timestep = timestep_;
 
     // init GLFW
     if (!glfwInit())
@@ -166,17 +171,23 @@ void BasicSim::single_step()
 {
     // mj_step(model, data); better when using actuation model
     mj_step1(model, data);
-    for (int i = 0; i < BasicSim::kNumActuators; i++)
+    for (int i = 0; i < N_ACTUATORS; i++)
     {
         data->ctrl[i] = actuator_torques_.at(i); // apply latest control values
     }
     mj_step2(model, data);
+#ifdef BASIC_SIM_DEBUG
+    std::cout << "nq: " << model->nq << " nv: " << model->nv << " nu: " << model->nu << std::endl;
+    std::cout << std::setprecision(4);
     std::cout << "Sim time: " << data->time << std::endl;
+#endif
 }
 
 void BasicSim::render()
 {
+#ifdef BASIC_SIM_DEBUG
     std::cout << "Rendering" << std::endl;
+#endif
     // get framebuffer viewport
     mjrRect viewport = {0, 0, 0, 0};
     glfwGetFramebufferSize(window_, &viewport.width, &viewport.height);
@@ -211,26 +222,32 @@ bool BasicSim::should_close()
     return glfwWindowShouldClose(window_);
 }
 
-void BasicSim::set_actuator_torques(std::array<double, BasicSim::kNumActuators> torques)
+/*
+ * TODO: figure out why negative required
+ */
+void BasicSim::set_actuator_torques(std::array<double, N_ACTUATORS> torques)
 {
-    actuator_torques_ = torques;
+    for (size_t i = 0; i < N_ACTUATORS; i++)
+    {
+        actuator_torques_.at(i) = torques.at(i);
+    }
 }
 
-std::array<double, BasicSim::kNumActuators> BasicSim::actuator_positions() const
+std::array<double, N_ACTUATORS> BasicSim::actuator_positions() const
 {
-    std::array<double, BasicSim::kNumActuators> positions;
+    std::array<double, N_ACTUATORS> positions;
     int start_idx = fixed_base_ ? 0 : kOrientationVars + kPositionVars;
-    for (int i = 0; i < BasicSim::kNumActuators; i++)
+    for (int i = 0; i < N_ACTUATORS; i++)
     {
         positions.at(i) = data->qpos[i + start_idx];
     }
     return positions;
 }
-std::array<double, BasicSim::kNumActuators> BasicSim::actuator_velocities() const
+std::array<double, N_ACTUATORS> BasicSim::actuator_velocities() const
 {
-    std::array<double, BasicSim::kNumActuators> velocities;
+    std::array<double, N_ACTUATORS> velocities;
     int start_idx = fixed_base_ ? 0 : 6;
-    for (int i = 0; i < BasicSim::kNumActuators; i++)
+    for (int i = 0; i < N_ACTUATORS; i++)
     {
         velocities.at(i) = data->qvel[i + start_idx];
     }
@@ -286,13 +303,17 @@ double BasicSim::sim_time() const
     return data->time;
 }
 
-BasicSim::BasicSim(bool fixed_base) : fixed_base_(fixed_base)
+BasicSim::BasicSim(bool fixed_base,
+                   float timestep) : fixed_base_(fixed_base),
+                                     timestep_(timestep)
 {
     actuator_torques_.fill(0.0);
 }
 
 BasicSim::~BasicSim()
 {
+#ifdef BASIC_SIM_DEBUG
     std::cout << "ENDING" << std::endl;
+#endif
     end();
 }
