@@ -17,6 +17,7 @@ public:
     MujocoNode(const char *model_xml,
                bool floating_base,
                float timestep,
+               float sim_step_rate,
                std::vector<std::string> joint_names,
                std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models,
                float publish_rate);
@@ -43,6 +44,7 @@ private:
 
     // Physics timer
     rclcpp::TimerBase::SharedPtr physics_timer_;
+    const float sim_step_rate_;
 
     // Render timer
     const float kRenderRate = 60.0;

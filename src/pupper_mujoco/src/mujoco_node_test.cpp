@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
     bool floating_base = false;
     float timestep = 0.001;
     float publish_rate = 500.0;
+    float sim_step_rate = 500.0; // 1000 seems to make legs move after a delay
 
     // Construct actuator models
     ActuatorParams params(
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
     rclcpp::spin(std::make_shared<MujocoNode>(model_xml,
                                               floating_base,
                                               timestep,
+                                              sim_step_rate,
                                               joint_names,
                                               actuator_models,
                                               publish_rate));

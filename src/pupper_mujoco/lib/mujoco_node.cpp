@@ -11,6 +11,7 @@ using std::placeholders::_1;
 MujocoNode::MujocoNode(const char *model_xml,
                        bool floating_base,
                        float timestep,
+                       float sim_step_rate,
                        std::vector<std::string> joint_names,
                        std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models,
                        float publish_rate) : Node("mujoco_node"),
@@ -18,6 +19,7 @@ MujocoNode::MujocoNode(const char *model_xml,
                                                    floating_base,
                                                    timestep),
                                              actuator_models_(actuator_models),
+                                             sim_step_rate_(sim_step_rate),
                                              publish_rate_(publish_rate)
 {
     n_actuators_ = core_.n_actuators();
@@ -60,6 +62,7 @@ MujocoNode::MujocoNode(const char *model_xml,
     //     std::bind(&MujocoNode::blocking_step_render, this));
 
     // OPTION 2 - rendering and stepping together in seperate thread (1 extra thread)
+    // NOTE: before testing, put back the mutex locks
     // FAILS - black screen
     // render_thread_ = std::thread(
     //     std::bind(&MujocoNode::step_and_render_thread, this));
@@ -68,7 +71,7 @@ MujocoNode::MujocoNode(const char *model_xml,
     // WORKS
     // Seems to have good real time factor, perhaps 0.9
     physics_timer_ = this->create_wall_timer(
-        rclcpp::WallRate(1.0 / timestep).period(),
+        rclcpp::WallRate(sim_step_rate_).period(),
         std::bind(&MujocoNode::step, this));
 
     render_timer_ = this->create_wall_timer(
@@ -77,6 +80,7 @@ MujocoNode::MujocoNode(const char *model_xml,
 
     // OPTION 4 - step and render each on different threads (2 extra threads)
     // FAILS: black screen
+    // NOTE: before testing, put back the mutex locks
     // step_thread_ = std::thread(
     //     std::bind(&MujocoNode::step_thread, this));
 
@@ -85,7 +89,7 @@ MujocoNode::MujocoNode(const char *model_xml,
 
     // OPTION 5 - call spin_some between every physics step
     // code is in the test file.
-    // FAILS: commands and states not published and received at correct rate
+    // FAILS: commands and states not published and received at fast enough rate
     start_ = now();
 }
 
@@ -98,7 +102,6 @@ void MujocoNode::step()
     std::cout << "clock msg: " << msg.clock.sec << " " << msg.clock.nanosec << std::endl;
     std::cout << "Step: " << core_.sim_time() << std::endl;
 
-    
     for (int i = 0; i < n_actuators_; i++)
     {
         auto pos = core_.actuator_positions();
