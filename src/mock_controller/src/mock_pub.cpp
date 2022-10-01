@@ -55,6 +55,12 @@ public:
             "leg_back_l_2",
             "leg_back_l_3",
         };
+        message.kp = std::vector<double>(12, 5.0);
+        message.kd = std::vector<double>(12, 0.5);
+        message.position_target = std::vector<double>(12, 0.0);
+        message.velocity_target = std::vector<double>(12, 0.0);
+        message.feedforward_torque = std::vector<double>(12, 0.0);
+
         start_ = now();
     }
     ~MockController()
@@ -65,10 +71,7 @@ private:
     void publish_callback()
     {
         message.header.stamp = now();
-        message.kp.fill(5.0);
-        message.kd.fill(0.5);
-        message.position_target.fill(0.0);
-
+        
         float freq = 3.0;
         float phase = ((now() - start_).nanoseconds() / 1.0e9) * 2 * M_PI * freq;
         float amp = 1.0;
@@ -77,9 +80,6 @@ private:
         message.position_target.at(3) = std::sin(phase) * amp;
         message.position_target.at(6) = -std::sin(phase) * amp;
         message.position_target.at(9) = -std::sin(phase) * amp;
-
-        message.velocity_target.fill(0.0);
-        message.feedforward_torque.fill(0.0);
 
         // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
         publisher_->publish(message);

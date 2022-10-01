@@ -36,6 +36,14 @@ target_link_libraries(basic mujoco::mujoco glfw)
 add_library(basic_sim lib/basic_sim.cpp)
 target_link_libraries(basic_sim mujoco::mujoco glfw)
 
+add_library(mujoco_core lib/mujoco_core.cpp)
+target_link_libraries(mujoco_core mujoco::mujoco glfw)
+
+add_library(mujoco_node lib/mujoco_node.cpp)
+target_link_libraries(mujoco_node mujoco_core)
+ament_target_dependencies(mujoco_node rclcpp std_msgs sensor_msgs
+                          pupper_interfaces)
+
 add_executable(basic_sim_test src/basic_sim_test.cpp)
 target_link_libraries(basic_sim_test basic_sim)
 
@@ -44,16 +52,20 @@ target_link_libraries(robot_emulator basic_sim)
 
 add_library(basic_sim_node lib/basic_sim_node.cpp)
 target_link_libraries(basic_sim_node robot_emulator)
-ament_target_dependencies(basic_sim_node rclcpp std_msgs
-                          sensor_msgs pupper_interfaces)
+ament_target_dependencies(basic_sim_node rclcpp std_msgs sensor_msgs
+                          rosgraph_msgs pupper_interfaces)
 
 add_executable(basic_sim_node_test src/basic_sim_node_test.cpp)
 target_link_libraries(basic_sim_node_test basic_sim_node)
+
+add_executable(mujoco_node_test src/mujoco_node_test.cpp)
+target_link_libraries(mujoco_node_test mujoco_node)
 
 install(TARGETS basic DESTINATION lib/${PROJECT_NAME})
 install(TARGETS basic_sim_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS simulate DESTINATION lib/${PROJECT_NAME})
 install(TARGETS basic_sim_node_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS mujoco_node_test DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY test/launch DESTINATION share/${PROJECT_NAME}/)
 

@@ -73,10 +73,10 @@ void BasicSimNode::publish_callback()
 
 void BasicSimNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)
 {
-    std::cout << "pos target: " << msg.position_target << std::endl;
-    robot_emulator_.command_actuator_torques(msg.kp,
-                                             msg.kd,
-                                             msg.position_target,
-                                             msg.velocity_target,
-                                             msg.feedforward_torque);
+    // std::cout << "pos target: " << msg.position_target << std::endl;
+    // robot_emulator_.command_actuator_torques(msg.kp,
+    //                                          msg.kd,
+    //                                          msg.position_target,
+    //                                          msg.velocity_target,
+    //                                          msg.feedforward_torque);
 }

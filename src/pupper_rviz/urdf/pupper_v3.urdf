@@ -11,7 +11,7 @@
       <visual name="ProtoAssembly-MGv25.004">
         <origin xyz="-0.0019 -0.00027 0.02901" rpy="1.5708 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.004.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.004.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
       <collision name="ProtoAssembly-MG v25.004">
@@ -31,7 +31,7 @@
       <visual name="ProtoAssembly-MGv25.016">
         <origin xyz="0.00263 8e-05 0.03455" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.016.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.016.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -45,7 +45,7 @@
       <visual name="ProtoAssembly-MGv25.014">
         <origin xyz="0.0461 0.00255 -0.05754" rpy="-1.5708 -1.5708 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.014.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.014.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -59,7 +59,7 @@
       <visual name="ProtoAssembly-MGv25.015">
         <origin xyz="-0.08114 0.0073 -0.01746" rpy="0 3.14159 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.015.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.015.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
       <collision name="ProtoAssembly-MGv25.017">
@@ -79,7 +79,7 @@
       <visual name="ProtoAssembly-MGv25.008">
         <origin xyz="0.00272 -1e-05 0.03409" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.012.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.012.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -93,7 +93,7 @@
       <visual name="ProtoAssembly-MGv25.006">
         <origin xyz="-0.04555 -0.00233 0.05745" rpy="1.5708 1.5708 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.010.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.010.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -107,7 +107,7 @@
       <visual name="ProtoAssembly-MGv25.007">
         <origin xyz="0.08114 -0.0073 0.01746" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.011.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.011.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
       <collision name="ProtoAssembly-MGv25.009">
@@ -127,7 +127,7 @@
       <visual name="ProtoAssembly-MGv25.012">
         <origin xyz="0.00263 8e-05 0.03455" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.003.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.003.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -141,7 +141,7 @@
       <visual name="ProtoAssembly-MGv25.010">
         <origin xyz="0.0461 0.00255 -0.05754" rpy="-1.5708 -1.5708 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.001.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.001.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -155,7 +155,7 @@
       <visual name="ProtoAssembly-MGv25.011">
         <origin xyz="-0.08114 0.0073 -0.01746" rpy="0 3.14159 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.002.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.002.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
       <collision name="ProtoAssembly-MGv25.013">
@@ -175,7 +175,7 @@
       <visual name="ProtoAssembly-MGv25.003">
         <origin xyz="0.00272 -1e-05 0.03409" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.007.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.007.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -189,7 +189,7 @@
       <visual name="ProtoAssembly-MGv25.001">
         <origin xyz="-0.04555 -0.00233 0.05745" rpy="1.5708 1.5708 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.005.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.005.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
     </link>
@@ -203,7 +203,7 @@
       <visual name="ProtoAssembly-MGv25.002">
         <origin xyz="0.08114 -0.0073 0.01746" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://pupper_v3/meshes/dae/ProtoAssembly-MGv25.006.dae" scale="1.0 1.0 1.0"/>
+          <mesh filename="package://pupper_rviz/meshes/dae/ProtoAssembly-MGv25.006.dae" scale="1.0 1.0 1.0"/>
         </geometry>
       </visual>
       <collision name="ProtoAssembly-MGv25.005">
