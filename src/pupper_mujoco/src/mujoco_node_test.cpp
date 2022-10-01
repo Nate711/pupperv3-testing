@@ -50,6 +50,14 @@ int main(int argc, char *argv[])
                                               joint_names,
                                               actuator_model,
                                               publish_rate));
+    // Option 5: joint commands not read fast enough?
+    // MujocoNode node(model_xml,
+    //                 floating_base,
+    //                 timestep,
+    //                 joint_names,
+    //                 actuator_model,
+    //                 publish_rate);
+    // node.step_and_render_loop_spinsome();
     rclcpp::shutdown();
     return 0;
 }

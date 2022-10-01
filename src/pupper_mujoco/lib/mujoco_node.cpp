@@ -82,14 +82,19 @@ MujocoNode::MujocoNode(const char *model_xml,
     // render_thread_ = std::thread(
     //     std::bind(&MujocoNode::render_loop, this));
 
+    // OPTION 5 - call spin_some between every physics step
+    // code is in the test file.
+    // FAILS: commands and states not published and received at correct rate
     start_ = now();
 }
 
 void MujocoNode::step()
 {
     rosgraph_msgs::msg::Clock msg;
-    msg.clock = core_.sim_time();
+    msg.clock = rclcpp::Time(core_.sim_time() * 1e9, RCL_ROS_TIME);
+    clock_publisher_->publish(msg);
 
+    std::cout << "clock msg: " << msg.clock.sec << " " << msg.clock.nanosec << std::endl;
     std::cout << "Step: " << core_.sim_time() << std::endl;
     for (int i = 0; i < n_actuators_; i++)
     {
@@ -151,6 +156,35 @@ void MujocoNode::step_and_render_thread()
         {
             /**************/
             std::this_thread::yield(); // try to let commands process
+            /**************/
+            step();
+        }
+        core_.render();
+    }
+}
+
+/**************
+ *
+ ***************/
+void MujocoNode::step_and_render_loop_spinsome()
+{
+    while (!core_.should_close())
+    {
+        auto simstart = core_.sim_time();
+        while (core_.sim_time() - simstart < 1.0 / kRenderRate)
+        {
+            /**************/
+            // try
+            // {
+            rclcpp::spin_some(this->get_node_base_interface());
+            // }
+            // catch (const rclcpp::exceptions::RCLError &e)
+            // {
+            //     RCLCPP_ERROR(
+            //         this->get_logger(),
+            //         "unexpectedly failed with %s",
+            //         e.what());
+            // }
             /**************/
             step();
         }

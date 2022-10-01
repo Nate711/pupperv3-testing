@@ -73,6 +73,7 @@ public:
                std::vector<std::string> joint_names,
                ActuatorModel actuator_model,
                float publish_rate);
+    void step_and_render_loop_spinsome();
 };
 
 #endif
