@@ -187,7 +187,6 @@ void MujocoCore::initialize(const char *model_file)
 
 void MujocoCore::single_step()
 {
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
     mj_step(model, data); // better when using actuation model
     // mj_step1(model, data);
     // need ctrl here?
