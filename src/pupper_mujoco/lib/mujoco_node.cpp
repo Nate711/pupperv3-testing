@@ -4,6 +4,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <mutex>
+#include <memory>
 
 using std::placeholders::_1;
 
@@ -11,12 +12,12 @@ MujocoNode::MujocoNode(const char *model_xml,
                        bool floating_base,
                        float timestep,
                        std::vector<std::string> joint_names,
-                       ActuatorModel actuator_model,
+                       std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models,
                        float publish_rate) : Node("mujoco_node"),
                                              core_(model_xml,
                                                    floating_base,
                                                    timestep),
-                                             actuator_model_(actuator_model),
+                                             actuator_models_(actuator_models),
                                              publish_rate_(publish_rate)
 {
     n_actuators_ = core_.n_actuators();
@@ -96,18 +97,19 @@ void MujocoNode::step()
 
     std::cout << "clock msg: " << msg.clock.sec << " " << msg.clock.nanosec << std::endl;
     std::cout << "Step: " << core_.sim_time() << std::endl;
+
+    
     for (int i = 0; i < n_actuators_; i++)
     {
-        // todo: allow for different actuator models for each actuator
         auto pos = core_.actuator_positions();
         auto vel = core_.actuator_velocities();
-        actuator_torques_.at(i) = actuator_model_.run(latest_msg_.kp.at(i),
-                                                      latest_msg_.kd.at(i),
-                                                      pos.at(i),
-                                                      latest_msg_.position_target.at(i),
-                                                      vel.at(i),
-                                                      latest_msg_.velocity_target.at(i),
-                                                      latest_msg_.feedforward_torque.at(i));
+        actuator_torques_.at(i) = actuator_models_.at(i)->run(latest_msg_.kp.at(i),
+                                                              latest_msg_.kd.at(i),
+                                                              pos.at(i),
+                                                              latest_msg_.position_target.at(i),
+                                                              vel.at(i),
+                                                              latest_msg_.velocity_target.at(i),
+                                                              latest_msg_.feedforward_torque.at(i));
     }
     core_.set_actuator_torques(actuator_torques_);
     core_.single_step(); // todo split across step1 and step2. otherwise not taking advantage of new state

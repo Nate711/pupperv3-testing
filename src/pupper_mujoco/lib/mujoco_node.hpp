@@ -13,6 +13,15 @@
 
 class MujocoNode : public rclcpp::Node
 {
+public:
+    MujocoNode(const char *model_xml,
+               bool floating_base,
+               float timestep,
+               std::vector<std::string> joint_names,
+               std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models,
+               float publish_rate);
+    void step_and_render_loop_spinsome();
+
 private:
     void joint_state_publish_callback();
     void joint_command_callback(const pupper_interfaces::msg::JointCommand &msg);
@@ -29,10 +38,7 @@ private:
 
     // TODO: allow any simulator
     MujocoCore core_;
-    // TODO: allow any actuator model
-    // much of the same logic should be shared
-    // regardless of actuator model and simulator
-    ActuatorModel actuator_model_;
+    std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models_;
     std::vector<double> actuator_torques_;
 
     // Physics timer
@@ -65,15 +71,6 @@ private:
     std::atomic<bool> stop_ = false;
 
     rclcpp::Time start_;
-
-public:
-    MujocoNode(const char *model_xml,
-               bool floating_base,
-               float timestep,
-               std::vector<std::string> joint_names,
-               ActuatorModel actuator_model,
-               float publish_rate);
-    void step_and_render_loop_spinsome();
 };
 
 #endif

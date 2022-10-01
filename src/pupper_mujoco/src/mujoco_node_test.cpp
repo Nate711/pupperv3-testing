@@ -1,6 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include "mujoco_node.hpp"
 #include "actuator_model.hpp"
+#include <memory>
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +16,8 @@ int main(int argc, char *argv[])
     bool floating_base = false;
     float timestep = 0.001;
     float publish_rate = 500.0;
+
+    // Construct actuator models
     ActuatorParams params(
         /*kp=*/2.0,
         /*kd=*/0.5,
@@ -24,6 +27,8 @@ int main(int argc, char *argv[])
         /*saturation_torque=*/4.5,
         /*software_torque_limit =*/3.0);
     ActuatorModel actuator_model(params);
+    std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models(12, std::make_shared<ActuatorModel>(params));
+
     std::vector<std::string> joint_names;
     const std::string joint_names_[12] = {
         "leg_front_r_1",
@@ -48,8 +53,9 @@ int main(int argc, char *argv[])
                                               floating_base,
                                               timestep,
                                               joint_names,
-                                              actuator_model,
+                                              actuator_models,
                                               publish_rate));
+
     // Option 5: joint commands not read fast enough?
     // MujocoNode node(model_xml,
     //                 floating_base,

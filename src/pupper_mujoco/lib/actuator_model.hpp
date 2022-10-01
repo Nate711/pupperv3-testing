@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "actuator_model_interface.hpp"
+
 // #define ACTUATOR_MODEL_DEBUG
 
 typedef double num_t;
@@ -42,7 +44,7 @@ struct ActuatorParams
     }
 };
 
-class ActuatorModel
+class ActuatorModel : public ActuatorModelInterface
 {
 public:
     ActuatorModel(ActuatorParams actuator_params) : params_(actuator_params)
