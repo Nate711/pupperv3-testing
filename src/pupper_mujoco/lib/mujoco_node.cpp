@@ -8,6 +8,8 @@
 
 using std::placeholders::_1;
 
+#define MUJOCO_NODE_DEBUG
+
 MujocoNode::MujocoNode(const char *model_xml,
                        bool floating_base,
                        float timestep,
@@ -23,7 +25,9 @@ MujocoNode::MujocoNode(const char *model_xml,
                                              publish_rate_(publish_rate)
 {
     n_actuators_ = core_.n_actuators();
-    std::cout << n_actuators_ << std::endl;
+#ifdef MUJOCO_NODE_DEBUG
+    std::cout << "n_actuators: " << n_actuators_ << std::endl;
+#endif
 
     // initialize torques
     actuator_torques_ = std::vector<double>(n_actuators_, 0.0);
@@ -98,10 +102,9 @@ void MujocoNode::step()
     rosgraph_msgs::msg::Clock msg;
     msg.clock = rclcpp::Time(core_.sim_time() * 1e9, RCL_ROS_TIME);
     clock_publisher_->publish(msg);
-
-    std::cout << "clock msg: " << msg.clock.sec << " " << msg.clock.nanosec << std::endl;
-    std::cout << "Step: " << core_.sim_time() << std::endl;
-
+#ifdef MUJOCO_NODE_DEBUG
+    std::cout << "step (sim time): " << core_.sim_time() << std::endl;
+#endif
     for (int i = 0; i < n_actuators_; i++)
     {
         auto pos = core_.actuator_positions();
@@ -133,7 +136,9 @@ void MujocoNode::blocking_step_render()
 
 void MujocoNode::render()
 {
-    std::cout << "render: " << core_.sim_time() << std::endl;
+#ifdef MUJOCO_NODE_DEBUG
+    std::cout << "render (sim time): " << core_.sim_time() << std::endl;
+#endif
     core_.render();
 }
 
@@ -212,7 +217,9 @@ void MujocoNode::step_thread()
 
 void MujocoNode::joint_state_publish_callback()
 {
-    std::cout << "joint state: " << (now() - start_).nanoseconds() / 1.0e9 << std::endl;
+#ifdef MUJOCO_NODE_DEBUG
+    std::cout << "joint state (wall clock): " << (now() - start_).nanoseconds() / 1.0e9 << std::endl;
+#endif
     joint_state_message_.header.stamp = now();
     joint_state_message_.position = core_.actuator_positions(); // slower than mem copy?
     joint_state_message_.velocity = core_.actuator_velocities();
@@ -231,7 +238,9 @@ void MujocoNode::joint_state_publish_callback()
 
 void MujocoNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)
 {
-    std::cout << "joint command: " << (now() - start_).nanoseconds() / 1.0e9 << std::endl;
+#ifdef MUJOCO_NODE_DEBUG
+    std::cout << "joint command (wall clock): " << (now() - start_).nanoseconds() / 1.0e9 << std::endl;
+#endif
     latest_msg_ = msg;
     // std::cout << "pos target: " << msg.position_target << std::endl;
 }

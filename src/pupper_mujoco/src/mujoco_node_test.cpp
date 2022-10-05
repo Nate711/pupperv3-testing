@@ -14,9 +14,13 @@ int main(int argc, char *argv[])
 
     const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_fixed_base.xml";
     bool floating_base = false;
-    float timestep = 0.001;
+
+    // const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_floating_base.xml";
+    // bool floating_base = true;
+    
+    float timestep = 0.004;
     float publish_rate = 500.0;
-    float sim_step_rate = 500.0; // 1000 seems to make legs move after a delay
+    float sim_step_rate = 250.0; // 1000 seems to make legs move after a delay
 
     // Construct actuator models
     ActuatorParams params(
