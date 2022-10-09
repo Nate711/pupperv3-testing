@@ -8,26 +8,30 @@
 
 using std::placeholders::_1;
 
-#define MUJOCO_NODE_DEBUG
+/*TODO: make core use correct timestep?*/
 
-MujocoNode::MujocoNode(const char *model_xml,
-                       bool floating_base,
-                       float timestep,
-                       float sim_step_rate,
-                       std::vector<std::string> joint_names,
-                       std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models,
-                       float publish_rate) : Node("mujoco_node"),
-                                             core_(model_xml,
-                                                   floating_base,
-                                                   timestep),
-                                             actuator_models_(actuator_models),
-                                             sim_step_rate_(sim_step_rate),
-                                             publish_rate_(publish_rate)
+MujocoNode::MujocoNode(std::vector<std::string> joint_names,
+                       std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models) : Node("mujoco_node"),
+                                                                                               actuator_models_(actuator_models)
 {
-    n_actuators_ = core_.n_actuators();
-#ifdef MUJOCO_NODE_DEBUG
-    std::cout << "n_actuators: " << n_actuators_ << std::endl;
-#endif
+    this->declare_parameter<float>("publish_rate", 500.0);
+    this->declare_parameter<float>("sim_step_rate", 250.0);
+    this->declare_parameter<float>("sim_render_rate", 30.0);
+    this->declare_parameter<std::string>("model_xml", "");
+    this->declare_parameter<bool>("floating_base", false);
+    this->declare_parameter<float>("timestep", 0.004);
+
+    std::string model_xml = this->get_parameter("model_xml").as_string();
+    bool floating_base = this->get_parameter("floating_base").as_bool();
+    float timestep = this->get_parameter("timestep").as_double();
+    float publish_rate = this->get_parameter("publish_rate").as_double();
+    float sim_step_rate = this->get_parameter("sim_step_rate").as_double();
+    float sim_render_rate = this->get_parameter("sim_render_rate").as_double();
+
+    core_ = std::make_unique<MujocoCore>(model_xml.c_str(), floating_base, timestep);
+
+    n_actuators_ = core_->n_actuators();
+    RCLCPP_INFO(this->get_logger(), "n_actuators= %d", n_actuators_);
 
     // initialize torques
     actuator_torques_ = std::vector<double>(n_actuators_, 0.0);
@@ -47,14 +51,14 @@ MujocoNode::MujocoNode(const char *model_xml,
 
     clock_publisher_ = this->create_publisher<rosgraph_msgs::msg::Clock>("/clock", 1);
 
-    publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
+    publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", rclcpp::SensorDataQoS());
     timer_ = this->create_wall_timer(
-        rclcpp::WallRate(publish_rate_).period(),
+        rclcpp::WallRate(publish_rate).period(),
         std::bind(&MujocoNode::joint_state_publish_callback, this));
 
     subscription_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
         "/joint_commands",
-        kSubscriberHistory,
+        rclcpp::SensorDataQoS(),
         std::bind(&MujocoNode::joint_command_callback, this, _1));
 
     // OPTION 1 - timer blocking step-render (single-thread)
@@ -75,11 +79,11 @@ MujocoNode::MujocoNode(const char *model_xml,
     // WORKS
     // Seems to have good real time factor, perhaps 0.9
     physics_timer_ = this->create_wall_timer(
-        rclcpp::WallRate(sim_step_rate_).period(),
+        rclcpp::WallRate(sim_step_rate).period(),
         std::bind(&MujocoNode::step, this));
 
     render_timer_ = this->create_wall_timer(
-        rclcpp::WallRate(kRenderRate).period(),
+        rclcpp::WallRate(sim_render_rate).period(),
         std::bind(&MujocoNode::render, this));
 
     // OPTION 4 - step and render each on different threads (2 extra threads)
@@ -100,15 +104,13 @@ MujocoNode::MujocoNode(const char *model_xml,
 void MujocoNode::step()
 {
     rosgraph_msgs::msg::Clock msg;
-    msg.clock = rclcpp::Time(core_.sim_time() * 1e9, RCL_ROS_TIME);
+    msg.clock = rclcpp::Time(core_->sim_time() * 1e9, RCL_ROS_TIME);
     clock_publisher_->publish(msg);
-#ifdef MUJOCO_NODE_DEBUG
-    std::cout << "step (sim time): " << core_.sim_time() << std::endl;
-#endif
+    RCLCPP_INFO(this->get_logger(), "step physics @ sim time %f", core_->sim_time());
     for (int i = 0; i < n_actuators_; i++)
     {
-        auto pos = core_.actuator_positions();
-        auto vel = core_.actuator_velocities();
+        auto pos = core_->actuator_positions();
+        auto vel = core_->actuator_velocities();
         actuator_torques_.at(i) = actuator_models_.at(i)->run(latest_msg_.kp.at(i),
                                                               latest_msg_.kd.at(i),
                                                               pos.at(i),
@@ -117,37 +119,35 @@ void MujocoNode::step()
                                                               latest_msg_.velocity_target.at(i),
                                                               latest_msg_.feedforward_torque.at(i));
     }
-    core_.set_actuator_torques(actuator_torques_);
-    core_.single_step(); // todo split across step1 and step2. otherwise not taking advantage of new state
+    core_->set_actuator_torques(actuator_torques_);
+    core_->single_step(); // todo split across step1 and step2. otherwise not taking advantage of new state
 }
 
 void MujocoNode::blocking_step_render()
 {
-    auto simstart = core_.sim_time();
-    while (core_.sim_time() - simstart < 1.0 / kRenderRate)
+    auto simstart = core_->sim_time();
+    while (core_->sim_time() - simstart < 1.0 / kRenderRate)
     {
         /**************/
         std::this_thread::yield(); // try to let commands process
         /**************/
         step();
     }
-    core_.render();
+    core_->render();
 }
 
 void MujocoNode::render()
 {
-#ifdef MUJOCO_NODE_DEBUG
-    std::cout << "render (sim time): " << core_.sim_time() << std::endl;
-#endif
-    core_.render();
+    RCLCPP_INFO(this->get_logger(), "render @ sim time %f", core_->sim_time());
+    core_->render();
 }
 
 // did not fix corruption and leaves black screen
 void MujocoNode::render_loop()
 {
-    while (!core_.should_close())
+    while (!core_->should_close())
     {
-        core_.render();
+        core_->render();
     }
     stop_ = true;
     step_thread_.join();
@@ -159,17 +159,17 @@ void MujocoNode::render_loop()
  ***************/
 void MujocoNode::step_and_render_thread()
 {
-    while (!core_.should_close())
+    while (!core_->should_close())
     {
-        auto simstart = core_.sim_time();
-        while (core_.sim_time() - simstart < 1.0 / kRenderRate)
+        auto simstart = core_->sim_time();
+        while (core_->sim_time() - simstart < 1.0 / kRenderRate)
         {
             /**************/
             std::this_thread::yield(); // try to let commands process
             /**************/
             step();
         }
-        core_.render();
+        core_->render();
     }
 }
 
@@ -178,10 +178,10 @@ void MujocoNode::step_and_render_thread()
  ***************/
 void MujocoNode::step_and_render_loop_spinsome()
 {
-    while (!core_.should_close())
+    while (!core_->should_close())
     {
-        auto simstart = core_.sim_time();
-        while (core_.sim_time() - simstart < 1.0 / kRenderRate)
+        auto simstart = core_->sim_time();
+        while (core_->sim_time() - simstart < 1.0 / kRenderRate)
         {
             /**************/
             // try
@@ -198,7 +198,7 @@ void MujocoNode::step_and_render_loop_spinsome()
             /**************/
             step();
         }
-        core_.render();
+        core_->render();
     }
 }
 
@@ -206,8 +206,8 @@ void MujocoNode::step_thread()
 {
     while (!stop_)
     {
-        auto simstart = core_.sim_time();
-        while (core_.sim_time() - simstart < 1.0 / kRenderRate)
+        auto simstart = core_->sim_time();
+        while (core_->sim_time() - simstart < 1.0 / kRenderRate)
         {
             std::this_thread::yield(); // try to let commands process
             step();
@@ -217,12 +217,11 @@ void MujocoNode::step_thread()
 
 void MujocoNode::joint_state_publish_callback()
 {
-#ifdef MUJOCO_NODE_DEBUG
-    std::cout << "joint state (wall clock): " << (now() - start_).nanoseconds() / 1.0e9 << std::endl;
-#endif
+    RCLCPP_INFO(this->get_logger(), "pub joint state @ %f", core_->sim_time());
+
     joint_state_message_.header.stamp = now();
-    joint_state_message_.position = core_.actuator_positions(); // slower than mem copy?
-    joint_state_message_.velocity = core_.actuator_velocities();
+    joint_state_message_.position = core_->actuator_positions(); // slower than mem copy?
+    joint_state_message_.velocity = core_->actuator_velocities();
 
     // Causes double free or corruption when ctrl-c physics step
     // And segmentation fault on rendering
@@ -238,9 +237,7 @@ void MujocoNode::joint_state_publish_callback()
 
 void MujocoNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)
 {
-#ifdef MUJOCO_NODE_DEBUG
-    std::cout << "joint command (wall clock): " << (now() - start_).nanoseconds() / 1.0e9 << std::endl;
-#endif
+    RCLCPP_INFO(this->get_logger(), "recv joint command @ sim time %f", core_->sim_time());
     latest_msg_ = msg;
     // std::cout << "pos target: " << msg.position_target << std::endl;
 }

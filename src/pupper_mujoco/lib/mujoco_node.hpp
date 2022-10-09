@@ -14,13 +14,8 @@
 class MujocoNode : public rclcpp::Node
 {
 public:
-    MujocoNode(const char *model_xml,
-               bool floating_base,
-               float timestep,
-               float sim_step_rate,
-               std::vector<std::string> joint_names,
-               std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models,
-               float publish_rate);
+    MujocoNode(std::vector<std::string> joint_names,
+               std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models);
     void step_and_render_loop_spinsome();
 
 private:
@@ -38,13 +33,14 @@ private:
     std::thread render_thread_;
 
     // TODO: allow any simulator
-    MujocoCore core_;
+    // MujocoCore core_;
+    std::unique_ptr<MujocoCore> core_;
+
     std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models_;
     std::vector<double> actuator_torques_;
 
     // Physics timer
     rclcpp::TimerBase::SharedPtr physics_timer_;
-    const float sim_step_rate_;
 
     // Render timer
     const float kRenderRate = 60.0;
@@ -53,7 +49,6 @@ private:
     // Joint State Publisher
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
-    const float publish_rate_;
     sensor_msgs::msg::JointState joint_state_message_;
     // For publishing joint states
     std::vector<std::string> joint_names_;
@@ -64,7 +59,6 @@ private:
 
     // Subscriber
     rclcpp::Subscription<pupper_interfaces::msg::JointCommand>::SharedPtr subscription_;
-    const int kSubscriberHistory = 1;
     pupper_interfaces::msg::JointCommand latest_msg_;
 
     int n_actuators_;

@@ -39,7 +39,7 @@
     <geom name="floor" size="0 0 .05" type="plane" material="grid" condim="3" />
     <light name="spotlight" mode="targetbodycom" target="torso" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 -4 4" cutoff="100" />
 
-    <body name="torso" pos="0 0 0.5" childclass="body">
+    <body name="torso" pos="0 0 0.2" childclass="body">
       <freejoint name="root"/>
       <geom pos="-0.0019 -0.00027 0.02901" quat="0.707105 0.707108 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.004" />
       <geom size="0.12009 0.05097 0.0575" pos="9e-05 0 0.02177" quat="0.707105 0.707108 0 0" type="box" />

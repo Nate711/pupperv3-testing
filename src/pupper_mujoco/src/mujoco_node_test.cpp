@@ -12,15 +12,20 @@ int main(int argc, char *argv[])
      */
     rclcpp::init(argc, argv);
 
-    const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_fixed_base.xml";
-    bool floating_base = false;
+    for (int i = 0; i < argc; i++)
+    {
+        std::cout << argv[i] << " ";
+    }
+
+    // const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_fixed_base.xml";
+    // bool floating_base = false;
 
     // const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_floating_base.xml";
     // bool floating_base = true;
-    
-    float timestep = 0.004;
-    float publish_rate = 500.0;
-    float sim_step_rate = 250.0; // 1000 seems to make legs move after a delay
+
+    // float timestep = 0.004;
+    // float publish_rate = 100.0;
+    // float sim_step_rate = 250.0; // 1000 seems to make legs move after a delay
 
     // Construct actuator models
     ActuatorParams params(
@@ -54,13 +59,9 @@ int main(int argc, char *argv[])
         joint_names.push_back(joint_names_[i]);
     }
 
-    rclcpp::spin(std::make_shared<MujocoNode>(model_xml,
-                                              floating_base,
-                                              timestep,
-                                              sim_step_rate,
-                                              joint_names,
-                                              actuator_models,
-                                              publish_rate));
+    rclcpp::spin(std::make_shared<MujocoNode>(
+        joint_names,
+        actuator_models));
 
     // Option 5: joint commands not read fast enough?
     // MujocoNode node(model_xml,
