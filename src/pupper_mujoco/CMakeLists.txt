@@ -51,7 +51,7 @@ install(TARGETS basic DESTINATION lib/${PROJECT_NAME})
 install(TARGETS simulate DESTINATION lib/${PROJECT_NAME})
 install(TARGETS mujoco_core_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS mujoco_node_test DESTINATION lib/${PROJECT_NAME})
-
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY test/launch DESTINATION share/${PROJECT_NAME}/)
 
 if(BUILD_TESTING)
