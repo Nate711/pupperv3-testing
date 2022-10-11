@@ -27,6 +27,7 @@
 #include "motor_controller_node.hpp"
 
 using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 #define M_DEG_TO_RAD 0.01745329252
 #define M_GEAR_RATIO 0.10
@@ -57,15 +58,46 @@ MotorControllerNode::MotorControllerNode(float rate,
     timer_ = this->create_wall_timer(
         rclcpp::WallRate(publish_rate_).period(),
         std::bind(&MotorControllerNode::publish_callback, this));
+
+    subscriber_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
+        "/joint_commands",
+        rclcpp::SensorDataQoS(),
+        std::bind(&MotorControllerNode::joint_command_callback, this, _1));
 }
 
 MotorControllerNode::~MotorControllerNode()
 {
 }
 
+/*
+ * TODO: add velocity, feedforward, kp, kd
+ */
+void MotorControllerNode::joint_command_callback(pupper_interfaces::msg::JointCommand joint_command)
+{
+    RCLCPP_INFO(this->get_logger(), "GOT JOINT COMMAND");
+    latest_joint_command_ = joint_command;
+}
+
+std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> MotorControllerNode::split_vector(
+    std::vector<double> vector)
+{
+    std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> data;
+    for (size_t i = 0; i < vector.size() / K_SERVOS_PER_CHANNEL; i++)
+    {
+        std::array<float, K_SERVOS_PER_CHANNEL> section;
+        for (size_t j = 0; j < K_SERVOS_PER_CHANNEL; j++)
+        {
+            section.at(j) = vector.at(j + K_SERVOS_PER_CHANNEL * i);
+        }
+        data.push_back(section);
+    }
+    return data;
+}
+
 void MotorControllerNode::publish_callback()
 {
-    motor_controller_.run({{0, 0, 0, 0, 0, 0}}); // must be running to get motor feedback
+    // must be running to get motor feedback
+    motor_controller_.run(split_vector(latest_joint_command_.position_target));
 
     auto latest_data = motor_controller_.motor_data_copy();
     for (int bus = 0; bus < 1; bus++)
@@ -86,23 +118,4 @@ void MotorControllerNode::publish_callback()
 
     // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
     publisher_->publish(joint_state_message_);
-}
-
-int main(int argc, char *argv[])
-{
-    rclcpp::init(argc, argv);
-    float rate = 500;
-    if (argc > 1)
-    {
-        rate = std::stof(argv[1]);
-    }
-    cout << "Rate: " << rate << endl;
-
-    float position_kp = 50;
-    uint8_t speed_kp = 0;
-    float max_speed = 5000;
-
-    rclcpp::spin(std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed));
-    rclcpp::shutdown();
-    return 0;
 }

@@ -72,7 +72,15 @@ public:
     void close_canbuses();
     void initialize_motors();
     void request_multi_angle(CANChannel bus, uint8_t motor_id);
+    /* Command motor current in amps
+     * Args:
+     *   current: amps
+     */
     void command_current(CANChannel bus, uint8_t motor_id, float current);
+    /* Command motor velocity in deg/s
+     * Args:
+     *   velocity: deg/s
+     */
     void command_velocity(CANChannel bus, uint8_t motor_id, float velocity);
     void write_pid_rom(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
     void write_pid_ram(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
@@ -82,6 +90,11 @@ public:
     void read_blocking(CANChannel bus);
     void start_read_threads();
     array<array<MotorData, kServosPerChannel>, kNumCANChannels> latest_data();
+    /* Report the latest data from the motor
+     * Multi_loop_angle: degs
+     * velocity: deg/s
+     * current: A
+     */
     MotorData motor_data_copy(CANChannel bus, uint8_t motor_id);
 
     static const uint8_t kDefaultIqKp = 0x3C;

@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         if (loop_count % PRINT_CYCLE == 0)
         {
             auto common = controller->motor_data_copy(CANChannel::CAN0, 1).common;
-            std::cout << common.current << "\t" << common.multi_loop_angle << "\t";
+            std::cout << "I(A): " << common.current << "\tTheta: " << common.multi_loop_angle << "\t";
         }
 
         usleep(sleep_us);
