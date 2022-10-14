@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
     signal(SIGINT, sigint_handler);
 
     // Create position controller
-    shared_ptr<MotorController<K_SERVOS_PER_CHANNEL>> controller(new MotorController<K_SERVOS_PER_CHANNEL>(/*position_kp (dps per deg)=*/50.0,
-                                                                                                           /*speed_kp=*/1,
+    shared_ptr<MotorController<K_SERVOS_PER_CHANNEL>> controller(new MotorController<K_SERVOS_PER_CHANNEL>(/*position_kp (dps per deg)=*/100.0,//50
+                                                                                                           /*speed_kp=*/4,//1
                                                                                                            /*max_speed (dps)=*/5000.0,
                                                                                                            /*can channels*/ {CANChannel::CAN0}));
     controller->begin();
@@ -49,14 +49,14 @@ int main(int argc, char *argv[])
         }
         last_loop_ts = loop_now;
 
-        float amp = 0.0; // 450.0; // 90 deg sweep at output
+        float amp = 450.0;//0.0; // 450.0; // 90 deg sweep at output
         float secs_since_start = duration_ms(loop_now - loop_start) / 1000000.0;
         // float freq = secs_since_start / 2.0; // chirp signal
         float freq = 2.0;
         float sample = std::sin(secs_since_start * 2 * M_PI * freq);
         // Set desired positions
         goal_positions.at(0).at(0) = amp * sample;
-        controller->run(goal_positions);
+        controller->position_control(goal_positions);
 
         if (loop_count % PRINT_CYCLE == 0)
         {

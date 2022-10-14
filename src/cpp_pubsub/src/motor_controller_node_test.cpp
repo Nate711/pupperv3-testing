@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     }
     cout << "Rate: " << rate << endl;
 
-    float position_kp = 50; // 50 is good default
+    float position_kp = 100; // 50 is good default
     uint8_t speed_kp = 1; // 1 is good default
     float max_speed = 5000;
 

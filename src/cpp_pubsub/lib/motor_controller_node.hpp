@@ -43,6 +43,7 @@ public:
                         uint8_t speed_kp,
                         float max_speed);
     ~MotorControllerNode();
+    static std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> split_vector(std::vector<double> vector);
 
 private:
     void publish_callback();
@@ -51,18 +52,18 @@ private:
     rclcpp::Subscription<pupper_interfaces::msg::JointCommand>::SharedPtr subscriber_;
     sensor_msgs::msg::JointState joint_state_message_;
     void joint_command_callback(pupper_interfaces::msg::JointCommand joint_command);
-    std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> split_vector(std::vector<double> vector);
+    // static std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> split_vector(std::vector<double> vector);
 
     const std::string joint_names_[12] = {
         "leg_front_r_1",
         "leg_front_r_2",
         "leg_front_r_3",
-        "leg_back_r_1",
-        "leg_back_r_2",
-        "leg_back_r_3",
         "leg_front_l_1",
         "leg_front_l_2",
         "leg_front_l_3",
+        "leg_back_r_1",
+        "leg_back_r_2",
+        "leg_back_r_3",
         "leg_back_l_1",
         "leg_back_l_2",
         "leg_back_l_3",

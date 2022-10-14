@@ -233,11 +233,11 @@ struct can_frame MOTOR_INTERFACE::read_canframe_blocking(CANChannel bus)
         {
             cout << "Bus " << static_cast<int>(bus) << " timed out on read" << endl;
         }
-        cerr << "ERROR: can raw socket read";
+        cerr << "ERROR: can raw socket read\n";
     }
     if (nbytes != sizeof(struct can_frame))
     {
-        cerr << "ERROR: did not read full can frame";
+        cerr << "ERROR: did not read full can frame\n";
     }
     stop = time_now();
     // cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
@@ -337,7 +337,7 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     cout << "Initializing " << channel_str(bus) << "." << endl;
     if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
     {
-        cerr << "socket";
+        cerr << "socket\n";
     }
 
     // find interface index
@@ -345,7 +345,7 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
     if (!ifr.ifr_ifindex)
     {
-        cerr << "if_nametoindex";
+        cerr << "if_nametoindex\n";
     }
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -355,7 +355,7 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     // bind socket
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        cerr << "bind";
+        cerr << "bind\n";
     }
     canbus_to_fd_.at(static_cast<int>(bus)) = s;
 
@@ -405,6 +405,7 @@ void MOTOR_INTERFACE::send(CANChannel bus,
                            uint8_t motor_id,
                            const array<uint8_t, 8> &payload)
 {
+    // std::cout << "Send can message\n";
     int file_descriptor = canbus_to_fd_.at(static_cast<int>(bus));
     struct can_frame frame;
     memset(&frame, 0, sizeof(frame));
@@ -414,7 +415,7 @@ void MOTOR_INTERFACE::send(CANChannel bus,
     auto start = time_now();
     if (write(file_descriptor, &frame, CAN_MTU) != CAN_MTU)
     {
-        cerr << "Error writing can frame";
+        cerr << "Error writing frame to " << channel_str(bus) << "\n";
     }
     auto stop = time_now();
     // cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us

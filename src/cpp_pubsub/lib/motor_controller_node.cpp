@@ -17,12 +17,11 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <cassert>
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
-
-#include "motor_interface.hpp"
 
 #include "motor_controller_node.hpp"
 
@@ -82,6 +81,7 @@ std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> MotorControllerNode::split_
     std::vector<double> vector)
 {
     std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> data;
+    assert(vector.size() % K_SERVOS_PER_CHANNEL == 0);
     for (size_t i = 0; i < vector.size() / K_SERVOS_PER_CHANNEL; i++)
     {
         std::array<float, K_SERVOS_PER_CHANNEL> section;
@@ -96,18 +96,30 @@ std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> MotorControllerNode::split_
 
 void MotorControllerNode::publish_callback()
 {
-    // must be running to get motor feedback
-    motor_controller_.run(split_vector(latest_joint_command_.position_target));
-
-    auto latest_data = motor_controller_.motor_data_copy();
-    for (int bus = 0; bus < 1; bus++)
+    // Must receive a joint command message to make latest_joint_command_ non-zero
+    // TODO: add watchdog
+    // TODO: log warning if zero
+    if (latest_joint_command_.position_target.size() == 0)
     {
-        for (int servo = 0; servo < K_SERVOS_PER_CHANNEL; servo++)
-        {
-            std::cout << latest_data.at(bus).at(servo).common.multi_loop_angle << "\t";
-        }
+        RCLCPP_WARN(this->get_logger(),
+                    "No joint command received. Skipping control");
+        return;
     }
-    std::cout << std::endl;
+    // Convert from output radians to motor degrees
+    // TODO: put conversion logic inside somewhere else
+    for (double &val : latest_joint_command_.position_target)
+    {
+        val *= 10 * 180 / 3.14;
+    }
+    auto motor_position_targets = split_vector(latest_joint_command_.position_target);
+    RCLCPP_INFO(this->get_logger(),
+                "Commanding %d motors on %d buses.",
+                latest_joint_command_.position_target.size(),
+                motor_position_targets.size());
+    motor_controller_.position_control(motor_position_targets);
+
+    RCLCPP_INFO(this->get_logger(), "Publishing joint states");
+    auto latest_data = motor_controller_.motor_data_copy();
     joint_state_message_.header.stamp = now();
     joint_state_message_.position.at(0) = latest_data.at(0).at(0).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
     joint_state_message_.position.at(1) = latest_data.at(0).at(1).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;

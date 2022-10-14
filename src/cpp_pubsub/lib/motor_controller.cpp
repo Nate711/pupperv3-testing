@@ -14,12 +14,13 @@ MOTOR_CONTROLLER::MotorController(float position_kp,
                                                                           speed_kp_(speed_kp),
                                                                           max_speed_(max_speed)
 {
+    num_can_buses_ = motor_connections.size();
 }
 
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::begin()
 {
-    std::cout<<"Initializing motor controller." << std::endl;
+    std::cout << "Initializing motor controller." << std::endl;
     motor_interface_.initialize_canbuses();
     motor_interface_.initialize_motors();
     motor_interface_.start_read_threads();
@@ -29,10 +30,14 @@ void MOTOR_CONTROLLER::begin()
 
 // TODO: don't use vectors, use arrays or something
 TEMPLATE_HEADER
-void MOTOR_CONTROLLER::run(vector<array<float, kServosPerChannel>> goal_positions)
+void MOTOR_CONTROLLER::position_control(vector<array<float, kServosPerChannel>> goal_positions)
 {
+    if (goal_positions.size() != num_can_buses_)
+    {
+        std::cout << "WARNING: attempting to use " << goal_positions.size() << " can buses when only " << num_can_buses_ << " were initialized\n";
+    }
     auto latest_data = motor_interface_.latest_data();
-    for (size_t bus_idx = 0; bus_idx < goal_positions.size(); bus_idx++)
+    for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++)
     {
         CANChannel bus = kAllCANChannels.at(bus_idx);
         for (int motor_id = 1; motor_id <= kServosPerChannel; motor_id++)

@@ -41,15 +41,19 @@ target_link_libraries(pd_test motor_interface)
 add_executable(motor_controller_test src/motor_controller_test.cpp)
 target_link_libraries(motor_controller_test motor_controller)
 
+add_executable(my_test src/test.cpp)
+target_link_libraries(my_test motor_controller_node)
+
 install(TARGETS talker DESTINATION lib/${PROJECT_NAME})
 install(TARGETS can_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS pd_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_test DESTINATION lib/${PROJECT_NAME})
-install(TARGETS motor_controller_node DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_node_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS my_test DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
   # the following line skips the linter which checks for copyrights comment the
   # line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
@@ -57,7 +61,16 @@ if(BUILD_TESTING)
   # when this package is in a git repo and when a copyright and license is added
   # to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
+  set(ament_cmake_cppcheck_FOUND TRUE)
+  set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  set(ament_cmake_flake8_FOUND TRUE)
+  set(ament_cmake_uncrustify_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  # Reporting failure still super broken
+  ament_add_gtest_executable(basic_test test/test_motor_controller_node.cpp)
+
 endif()
 
 ament_package()
