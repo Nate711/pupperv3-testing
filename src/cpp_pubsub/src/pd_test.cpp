@@ -58,10 +58,11 @@ int main()
         if (loop_count % PRINT_CYCLE == 0)
         {
             // cout << motor_data.temp << "\t" << motor_data.current << "\t" << motor_data.velocity << "\t" << motor_data.encoder_counts << "\t" << rotations << "\t" << multi_loop_angle << "\t";
-            cout << motor_data.common.current << "\t" << motor_data.common.velocity << "\t" << motor_data.common.encoder_counts << "\t";
+            cout << motor_data.common.current << "\t" << motor_data.common.velocity_degs << "\t" << motor_data.common.encoder_counts << "\t";
             cout << motor_data.common.rotations << "\t" << motor_data.common.multi_loop_angle << "\t";
-            
-            for(int motor_id=1; motor_id < K_SERVOS_PER_CHANNEL; motor_id++) {
+
+            for (int motor_id = 1; motor_id < K_SERVOS_PER_CHANNEL; motor_id++)
+            {
                 cout << motor_interface.motor_data_copy(CANChannel::CAN0, motor_id).multi_loop.multi_loop_angle;
             }
         }

@@ -105,17 +105,12 @@ void MotorControllerNode::publish_callback()
                     "No joint command received. Skipping control");
         return;
     }
-    // Convert from output radians to motor degrees
-    // TODO: put conversion logic inside somewhere else
-    for (double &val : latest_joint_command_.position_target)
-    {
-        val *= 10 * 180 / 3.14;
-    }
     auto motor_position_targets = split_vector(latest_joint_command_.position_target);
     RCLCPP_INFO(this->get_logger(),
-                "Commanding %d motors on %d buses.",
+                "Commanding %lu motors on %lu buses.",
                 latest_joint_command_.position_target.size(),
                 motor_position_targets.size());
+    // RCLCPP_INFO(this->get_logger(), motor_position_targets);            
     motor_controller_.position_control(motor_position_targets);
 
     RCLCPP_INFO(this->get_logger(), "Publishing joint states");

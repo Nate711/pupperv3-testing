@@ -44,11 +44,13 @@ void MOTOR_CONTROLLER::position_control(vector<array<float, kServosPerChannel>> 
         {
             MotorData motor_data = latest_data.at(bus_idx).at(motor_id - 1);
             float goal_position = goal_positions.at(bus_idx).at(motor_id - 1);
-            float position_error = goal_position - motor_data.common.multi_loop_angle;
-            float velocity_command = position_error * position_kp_;
+            std::cout << "gpos: " << goal_position << " pos: " << motor_data.common.output_radians << " ";
+            float position_error = goal_position - motor_data.common.output_radians; // scale kp down by factor of 10*180/pi
+            float velocity_command = position_error * position_kp_;                  // in rotor deg/s
             velocity_command = std::clamp(velocity_command, -max_speed_, max_speed_);
             motor_interface_.command_velocity(bus, motor_id, velocity_command);
         }
+        std::cout << std::endl;
     }
 }
 

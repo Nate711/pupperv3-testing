@@ -24,7 +24,6 @@
 
 using namespace std;
 
-
 static const int kNumCANChannels = 4;
 
 enum class CANChannel
@@ -41,12 +40,14 @@ struct CommonResponse
 {
     int16_t encoder_counts = 0;          // counts (-2^15-1 to 2^15)
     int16_t previous_encoder_counts = 0; // previous counts
-    float velocity = 0.0;                // degs per sec
+    float velocity_degs = 0.0;           // degs per sec
+    float velocity_rads = 0.0;           // degs per sec
     float current = 0.0;                 // Amps
     uint8_t temp = 0;                    // C
 
     int32_t rotations = 0;        // motor rotations (post-processed)
     float multi_loop_angle = 0.0; // degs (post-processed)
+    float output_radians = 0.0;   // degs (post-processed)
 };
 
 struct MultiLoopAngleResponse

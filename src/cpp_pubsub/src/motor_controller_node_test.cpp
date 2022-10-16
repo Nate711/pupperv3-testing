@@ -30,9 +30,9 @@ int main(int argc, char *argv[])
     }
     cout << "Rate: " << rate << endl;
 
-    float position_kp = 100; // 50 is good default
-    uint8_t speed_kp = 1; // 1 is good default
-    float max_speed = 5000;
+    float position_kp = 50000; // 50000 units rotor deg/s per output rad
+    uint8_t speed_kp = 5;      // 1 is good default. units A/rotor deg/s
+    float max_speed = 5000;    // rotor deg/s
 
     rclcpp::spin(std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed));
     rclcpp::shutdown();

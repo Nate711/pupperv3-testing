@@ -28,6 +28,8 @@ using namespace std;
 #define TEMPLATE_HEADER template <int kServosPerChannel>
 #define MOTOR_INTERFACE MotorInterface<kServosPerChannel>
 
+#define DEG_TO_RAD 0.01745329252
+
 TEMPLATE_HEADER
 MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections) : motor_connections_(motor_connections),
                                                                         initialized_(false),
@@ -198,6 +200,7 @@ void MOTOR_INTERFACE::update_rotation(CommonResponse &common)
     }
     common.previous_encoder_counts = common.encoder_counts;
     common.multi_loop_angle = (common.rotations + (float)common.encoder_counts / kEncoderCountsPerRot) * 360.0;
+    common.output_radians = common.multi_loop_angle * kSpeedReduction * DEG_TO_RAD;
 }
 
 TEMPLATE_HEADER
@@ -291,7 +294,8 @@ void MOTOR_INTERFACE::torque_velocity_update(CANChannel bus,
         CommonResponse &common = motor_data(bus, motor_id).common;
         common.temp = temp_raw;
         common.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
-        common.velocity = speed_raw;
+        common.velocity_degs = speed_raw;
+        common.velocity_rads = common.velocity_degs * DEG_TO_RAD;
         common.encoder_counts = encoder_counts;
         update_rotation(common);
     }
