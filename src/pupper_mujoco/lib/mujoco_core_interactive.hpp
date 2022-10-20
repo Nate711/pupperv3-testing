@@ -1,0 +1,6 @@
+#ifndef H_MUJOCO_CORE_INTERACTIVE
+#define H_MUJOCO_CORE_INTERACTIVE
+
+
+
+#endif

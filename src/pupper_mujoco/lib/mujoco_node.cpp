@@ -42,6 +42,10 @@ MujocoNode::MujocoNode(std::vector<std::string> joint_names,
     joint_state_message_.velocity = std::vector<double>(n_actuators_, 0.0);
     joint_state_message_.effort = std::vector<double>(n_actuators_, 0.0);
 
+    // initialize robot state tf2 message
+    body_tf_.header.frame_id = "world";
+    body_tf_.child_frame_id = "base_link";
+
     // initialize command message
     latest_msg_.kp = std::vector<double>(n_actuators_, 0.0);
     latest_msg_.kd = std::vector<double>(n_actuators_, 0.0);
@@ -55,6 +59,9 @@ MujocoNode::MujocoNode(std::vector<std::string> joint_names,
     timer_ = this->create_wall_timer(
         rclcpp::WallRate(publish_rate).period(),
         std::bind(&MujocoNode::joint_state_publish_callback, this));
+
+    body_tf_broadcaster_ =
+        std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
     subscription_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
         "/joint_commands",
@@ -98,7 +105,7 @@ MujocoNode::MujocoNode(std::vector<std::string> joint_names,
     // OPTION 5 - call spin_some between every physics step
     // code is in the test file.
     // FAILS: commands and states not published and received at fast enough rate
-    start_ = now();
+    start_ = this->get_clock()->now();
 }
 
 void MujocoNode::step()
@@ -219,7 +226,7 @@ void MujocoNode::joint_state_publish_callback()
 {
     RCLCPP_INFO(this->get_logger(), "pub joint state @ %f", core_->sim_time());
 
-    joint_state_message_.header.stamp = now();
+    joint_state_message_.header.stamp = this->get_clock()->now();
     joint_state_message_.position = core_->actuator_positions(); // slower than mem copy?
     joint_state_message_.velocity = core_->actuator_velocities();
 
@@ -233,6 +240,18 @@ void MujocoNode::joint_state_publish_callback()
     //           std::begin(joint_state_message_.velocity));
 
     publisher_->publish(joint_state_message_);
+
+    body_tf_.header.stamp = this->get_clock()->now();
+    auto body_pos = core_->base_position();
+    auto body_quat = core_->base_orientation();
+    body_tf_.transform.translation.x = body_pos.at(0);
+    body_tf_.transform.translation.y = body_pos.at(1);
+    body_tf_.transform.translation.z = body_pos.at(2);
+    body_tf_.transform.rotation.w = body_quat.at(0);
+    body_tf_.transform.rotation.x = body_quat.at(1);
+    body_tf_.transform.rotation.y = body_quat.at(2);
+    body_tf_.transform.rotation.z = body_quat.at(3);
+    body_tf_broadcaster_->sendTransform(body_tf_);
 }
 
 void MujocoNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)

@@ -10,6 +10,8 @@
 #include <pupper_interfaces/msg/joint_command.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_ros/transform_broadcaster.h"
 
 class MujocoNode : public rclcpp::Node
 {
@@ -50,8 +52,11 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
     sensor_msgs::msg::JointState joint_state_message_;
-    // For publishing joint states
     std::vector<std::string> joint_names_;
+
+    // Body state publisher
+    std::unique_ptr<tf2_ros::TransformBroadcaster> body_tf_broadcaster_;
+    geometry_msgs::msg::TransformStamped body_tf_;
 
     // Clock publisher
     // Publishes every physics step

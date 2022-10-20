@@ -13,23 +13,25 @@
 
 // #define BASIC_SIM_DEBUG
 
-mjModel *model = NULL; // MuJoCo model
-mjData *data = NULL;   // MuJoCo data
+mjModel *MujocoCore::model = NULL; // MuJoCo model
+mjData *MujocoCore::data = NULL;   // MuJoCo data
 
 // mouse interaction
-bool button_left = false;
-bool button_middle = false;
-bool button_right = false;
-double lastx = 0;
-double lasty = 0;
+bool MujocoCore::button_left = false;
+bool MujocoCore::button_middle = false;
+bool MujocoCore::button_right = false;
+double MujocoCore::lastx = 0;
+double MujocoCore::lasty = 0;
 
-mjvScene scn;  // abstract scene
-mjvCamera cam; // abstract camera
-// mjvOption opt;  // visualization options
-// mjrContext con; // custom GPU context
+GLFWwindow *MujocoCore::window_; // GLFW window
+
+mjvScene MujocoCore::scn;    // abstract scene
+mjvCamera MujocoCore::cam;   // abstract camera
+mjvOption MujocoCore::opt_;  // visualization options
+mjrContext MujocoCore::con_; // custom GPU context
 
 // keyboard callback
-void keyboard(GLFWwindow *window, int key, int scancode, int act, int mods)
+void MujocoCore::keyboard(GLFWwindow *window, int key, int scancode, int act, int mods)
 {
     // backspace: reset simulation
     if (act == GLFW_PRESS && key == GLFW_KEY_BACKSPACE)
@@ -40,7 +42,7 @@ void keyboard(GLFWwindow *window, int key, int scancode, int act, int mods)
 }
 
 // mouse button callback
-void mouse_button(GLFWwindow *window, int button, int act, int mods)
+void MujocoCore::mouse_button(GLFWwindow *window, int button, int act, int mods)
 {
     // update button state
     button_left = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
@@ -52,7 +54,7 @@ void mouse_button(GLFWwindow *window, int button, int act, int mods)
 }
 
 // mouse move callback
-void mouse_move(GLFWwindow *window, double xpos, double ypos)
+void MujocoCore::mouse_move(GLFWwindow *window, double xpos, double ypos)
 {
     // no buttons down: nothing to do
     if (!button_left && !button_middle && !button_right)
@@ -94,7 +96,7 @@ void mouse_move(GLFWwindow *window, double xpos, double ypos)
 }
 
 // scroll callback
-void scroll(GLFWwindow *window, double xoffset, double yoffset)
+void MujocoCore::scroll(GLFWwindow *window, double xoffset, double yoffset)
 {
     // emulate vertical mouse motion = 5% of window height
     mjv_moveCamera(model, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
@@ -263,11 +265,11 @@ std::array<double, 4> MujocoCore::base_orientation()
     // std::unique_lock<std::mutex> lock(protect_model_data_);
     if (floating_base_)
     {
-        return {data->qpos[0], data->qpos[1], data->qpos[2], data->qpos[3]};
+        return {data->qpos[3], data->qpos[4], data->qpos[5], data->qpos[6]};
     }
     else
     {
-        return {0.0, 0.0, 0.0, 0.0};
+        return {1.0, 0.0, 0.0, 0.0};
     }
 }
 std::array<double, 3> MujocoCore::base_position()
@@ -275,7 +277,7 @@ std::array<double, 3> MujocoCore::base_position()
     // std::unique_lock<std::mutex> lock(protect_model_data_);
     if (floating_base_)
     {
-        return {data->qpos[4], data->qpos[5], data->qpos[6]};
+        return {data->qpos[0], data->qpos[1], data->qpos[2]};
     }
     else
     {
