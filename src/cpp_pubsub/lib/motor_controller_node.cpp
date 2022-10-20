@@ -122,6 +122,12 @@ void MotorControllerNode::publish_callback()
     joint_state_message_.position.at(3) = latest_data.at(0).at(3).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
     joint_state_message_.position.at(4) = latest_data.at(0).at(4).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
     joint_state_message_.position.at(5) = latest_data.at(0).at(5).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(6) = latest_data.at(1).at(0).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(7) = latest_data.at(1).at(1).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(8) = latest_data.at(1).at(2).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(9) = latest_data.at(1).at(3).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(10) = latest_data.at(1).at(4).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
+    joint_state_message_.position.at(11) = latest_data.at(1).at(5).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
 
     // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
     publisher_->publish(joint_state_message_);

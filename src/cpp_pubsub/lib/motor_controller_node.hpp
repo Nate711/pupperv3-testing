@@ -30,7 +30,7 @@
 
 #define K_SERVOS_PER_CHANNEL 6
 
-const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0};
+const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
 
 /* This example creates a subclass of Node and uses std::bind() to register a
  * member function as a callback from the timer. */
