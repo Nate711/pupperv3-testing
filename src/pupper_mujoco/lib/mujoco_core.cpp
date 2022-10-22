@@ -104,13 +104,10 @@ void MujocoCore::scroll(GLFWwindow *window, double xoffset, double yoffset)
 
 MujocoCore::MujocoCore(const char *model_file,
                        bool floating_base,
-                       float timestep) : floating_base_(floating_base),
-                                         timestep_(timestep)
+                       float timestep) : MujocoBase{floating_base,
+                                                    timestep}
 {
     initialize(model_file);
-
-    positions_ = std::vector<double>(n_actuators_, 0.0);
-    velocities_ = std::vector<double>(n_actuators_, 0.0);
 }
 
 MujocoCore::~MujocoCore()
@@ -151,7 +148,8 @@ void MujocoCore::initialize(const char *model_file)
 
     // record parsed number of actuators and states
     n_actuators_ = model->nu;
-    n_coordinates = model->nq;
+    n_coordinates_ = model->nq;
+    n_coordinate_dts_ = model->nv;
 
     // make data
     data = mj_makeData(model);
@@ -185,6 +183,15 @@ void MujocoCore::initialize(const char *model_file)
     glfwSetCursorPosCallback(window_, mouse_move);
     glfwSetMouseButtonCallback(window_, mouse_button);
     glfwSetScrollCallback(window_, scroll);
+}
+
+mjtNum *MujocoCore::qpos()
+{
+    return data->qpos;
+}
+mjtNum *MujocoCore::qvel()
+{
+    return data->qvel;
 }
 
 void MujocoCore::single_step()
@@ -237,75 +244,6 @@ void MujocoCore::set_actuator_torques(std::vector<double> torques)
     for (int i = 0; i < n_actuators_; i++)
     {
         data->ctrl[i] = torques.at(i);
-    }
-}
-
-std::vector<double> MujocoCore::actuator_positions()
-{
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
-    int start_idx = floating_base_ ? kOrientationVars + kPositionVars : 0;
-    for (int i = 0; i < n_actuators_; i++)
-    {
-        positions_.at(i) = data->qpos[i + start_idx];
-    }
-    return positions_;
-}
-std::vector<double> MujocoCore::actuator_velocities()
-{
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
-    int start_idx = floating_base_ ? kBaseVelocityVars : 0;
-    for (int i = 0; i < n_actuators_; i++)
-    {
-        velocities_.at(i) = data->qvel[i + start_idx];
-    }
-    return velocities_;
-}
-std::array<double, 4> MujocoCore::base_orientation()
-{
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
-    if (floating_base_)
-    {
-        return {data->qpos[3], data->qpos[4], data->qpos[5], data->qpos[6]};
-    }
-    else
-    {
-        return {1.0, 0.0, 0.0, 0.0};
-    }
-}
-std::array<double, 3> MujocoCore::base_position()
-{
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
-    if (floating_base_)
-    {
-        return {data->qpos[0], data->qpos[1], data->qpos[2]};
-    }
-    else
-    {
-        return {0.0, 0.0, 0.0};
-    }
-}
-std::array<double, 3> MujocoCore::base_angular_velocity()
-{
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
-    if (floating_base_)
-    {
-        return {data->qvel[0], data->qvel[1], data->qvel[2]};
-    }
-    else
-    {
-        return {0.0, 0.0, 0.0};
-    }
-}
-std::array<double, 3> MujocoCore::base_velocity()
-{
-    // std::unique_lock<std::mutex> lock(protect_model_data_);
-    if (floating_base_)
-    {
-        return {data->qvel[3], data->qvel[4], data->qvel[5]};
-    }
-    else
-    {
-        return {0.0, 0.0, 0.0};
     }
 }
 

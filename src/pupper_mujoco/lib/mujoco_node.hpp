@@ -36,7 +36,7 @@ private:
 
     // TODO: allow any simulator
     // MujocoCore core_;
-    std::unique_ptr<MujocoCore> core_;
+    std::unique_ptr<SimulatorInterface> core_;
 
     std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models_;
     std::vector<double> actuator_torques_;

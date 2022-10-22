@@ -114,10 +114,10 @@ void MujocoNode::step()
     msg.clock = rclcpp::Time(core_->sim_time() * 1e9, RCL_ROS_TIME);
     clock_publisher_->publish(msg);
     RCLCPP_INFO(this->get_logger(), "step physics @ sim time %f", core_->sim_time());
+    auto pos = core_->actuator_positions();
+    auto vel = core_->actuator_velocities();
     for (int i = 0; i < n_actuators_; i++)
     {
-        auto pos = core_->actuator_positions();
-        auto vel = core_->actuator_velocities();
         actuator_torques_.at(i) = actuator_models_.at(i)->run(latest_msg_.kp.at(i),
                                                               latest_msg_.kd.at(i),
                                                               pos.at(i),

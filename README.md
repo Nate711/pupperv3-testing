@@ -23,14 +23,15 @@ Write a node that publishes
 ```
 std_msgs/Header header
 
-string[12] name
-float64[12] kp
-float64[12] kd
-float64[12] position_target
-float64[12] velocity_target
-float64[12] feedforward_torque
+string[] name
+float64[] kp
+float64[] kd
+float64[] position_target
+float64[] velocity_target
+float64[] feedforward_torque
 ```
-Note that the array sizes are hard-coded to 12, and they become ``std:array<double, 12>``. Should probably make variable-length.
+
 
 # TODO
-Refactor everything to adopt any robot xml. Which means number of actuators can be variable. Allow plugging in a custom actuator model.
+* Refactor everything to adopt any robot xml. Which means number of actuators can be variable. Allow plugging in a custom actuator model.
+* 
