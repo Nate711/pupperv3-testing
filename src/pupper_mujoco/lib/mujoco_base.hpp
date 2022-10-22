@@ -33,7 +33,7 @@ public:
 
     MujocoBase(bool floating_base, float timestep) : floating_base_(floating_base), timestep_(timestep)
     {
-    }`
+    }
 
     std::vector<double> actuator_positions()
     {

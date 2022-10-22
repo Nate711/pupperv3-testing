@@ -34,4 +34,4 @@ float64[] feedforward_torque
 
 # TODO
 * Refactor everything to adopt any robot xml. Which means number of actuators can be variable. Allow plugging in a custom actuator model.
-* 
+* Make the sim publish at a rate connected to sim time
