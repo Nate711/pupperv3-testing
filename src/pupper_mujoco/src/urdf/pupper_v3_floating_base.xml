@@ -41,7 +41,7 @@
 
     <body name="torso" pos="0 0 0.2" childclass="body">
       <freejoint name="root"/>
-      <inertial pos="0 0 0" mass="0.600" diaginertia="2e-03 2e-03 2e-03" />
+      <inertial pos="0 0 0" mass="1.600" diaginertia="2e-03 2e-03 2e-03" />
       <geom pos="-0.0019 -0.00027 0.02901" quat="0.707105 0.707108 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.004" />
       <geom size="0.12009 0.05097 0.0575" pos="9e-05 0 0.02177" quat="0.707105 0.707108 0 0" type="box" />
       
@@ -53,6 +53,10 @@
           <inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
           <joint armature="0.0016" name="leg_front_r_2" pos="0 0 0" axis="0 0 1" limited="true" range="-0.69813 1.5708" />
           <geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.005" />
+          
+          <!-- Collision for knee motor -->
+          <geom size="0.025" pos="-0.0607 -0.005 0.07062" />
+          
           <body name="leg_front_r_3" pos="-0.0607 0 0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
             <inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
             <joint armature="0.0016" name="leg_front_r_3" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 1.20428" />
@@ -70,6 +74,10 @@
           <inertial pos="0.0461 0.00255 -0.05754" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
           <joint armature="0.0016" name="leg_front_l_2" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.5708 0.69813" />
           <geom pos="0.0461 0.00255 -0.05754" quat="0.499998 -0.5 -0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.001" />
+          
+          <!-- Collision for knee motor -->
+          <geom size="0.025" pos="0.0607 0.005 -0.07062" />
+          
           <body name="leg_front_l_3" pos="0.0607 0 -0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
             <inertial pos="-0.08114 0.0073 -0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
             <joint armature="0.0016" name="leg_front_l_3" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.20428 3.14159" />
@@ -87,6 +95,10 @@
           <inertial pos="-0.04555 -0.00233 0.05745" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
           <joint armature="0.0016" name="leg_back_r_2" pos="0 0 0" axis="0 0 1" limited="true" range="-0.69813 1.5708" />
           <geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.010" />
+          
+          <!-- Collision for knee motor -->
+          <geom size="0.025" pos="-0.0607 -0.005 0.07062" />
+          
           <body name="leg_back_r_3" pos="-0.0607 0 0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
             <inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
             <joint armature="0.0016" name="leg_back_r_3" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 1.20428" />
@@ -104,6 +116,10 @@
           <inertial pos="0.0461 0.00255 -0.05754" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
           <joint armature="0.0016" name="leg_back_l_2" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.5708 0.69813" />
           <geom pos="0.0461 0.00255 -0.05754" quat="0.499998 -0.5 -0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.014" />
+          
+          <!-- Collision for knee motor -->
+          <geom size="0.025" pos="0.0607 0.005 -0.07062" />
+          
           <body name="leg_back_l_3" pos="0.0607 0 -0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
             <inertial pos="-0.08114 0.0073 -0.01746" quat="0.5 0.5 -0.5 0.5" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
             <joint armature="0.0016" name="leg_back_l_3" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.20428 3.14159" />
