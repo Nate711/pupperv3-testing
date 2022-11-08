@@ -1,0 +1,50 @@
+actuator:
+  armature: 0.0016
+  ctrlrange:
+  - -3
+  - 3
+  damping: 0.001
+  forcerange:
+  - -3
+  - 3
+  frictionloss: 0.02
+  gear: 1.0
+floating_base: true
+friction: 1.0
+hip:
+  location:
+    back:
+      left: -0.085 0.05 0
+      right: -0.085 -0.05 0
+    front:
+      left: 0.085 0.05 0
+      right: 0.085 -0.05 0
+  mass: 0.16
+  mesh:
+    left: ProtoAssembly-MGv25.003
+    right: ProtoAssembly-MGv25.007
+  right_com:
+  - 0.00272
+  - -1.0e-05
+  - 0.03409
+  right_limits:
+  - -2.35619
+  - 2.87979
+  right_mesh_pos:
+  - 0.00272
+  - -1.0e-05
+  - 0.03409
+  right_orientation:
+  - 0.707106
+  - 0.707106
+  - 0
+  - 0
+lower_leg_mass: '0.045'
+lower_link_mesh: ProtoAssembly-MGv25.006
+mesh_dir: ../meshes/
+torso_pos:
+- 0
+- 0
+- 0.2
+upper_leg_mass: '0.17'
+upper_leg_mesh: ProtoAssembly-MGv25.005
