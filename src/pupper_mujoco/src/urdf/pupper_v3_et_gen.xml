@@ -24,7 +24,7 @@
 		<material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2" />
 	</asset>
 	<default>
-		<motor forcelimited="true" forcerange="-3 3 " ctrlrange="-3 3 " ctrllimited="true" />
+		<motor forcelimited="true" forcerange="-3 3" ctrlrange="-3 3" ctrllimited="true" />
 		<default class="body">
 			<geom condim="1" friction="1.0" solimp=".9 .99 .003" solref=".015 1" material="body" />
 			<joint type="hinge" damping="0.001" frictionloss="0.02" limited="true" solimplimit="0 0.99 0.01" />
@@ -33,76 +33,76 @@
 	<world_body>
 		<geom name="floor" size="0 0 .05" type="plane" material="grid" condim="3" />
 		<light name="spotlight" mode="targetbodycom" target="torso" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 -4 4" cutoff="100" />
-		<body name="torso" pos="0 0 0.2 " childclass="body">
+		<body name="torso" pos="0 0 0.2" childclass="body">
 			<freejoint name="root" />
-			<inertial pos="0 0 0" mass="1.6" diaginertia="2e-03 2e-03 2e-03" />
+			<inertial pos="0 0 0" mass="1.6" diaginertia="0.002 0.002 0.002 0 0 0" />
 			<geom pos="-0.0019 -0.00027 0.02901" quat="0.707105 0.707108 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.004" />
 			<geom size="0.12009 0.05097 0.0575" pos="9e-05 0 0.02177" quat="0.707105 0.707108 0 0" type="box" />
-			<body name="front_right_hip" pos="0.085 -0.05 0" quat="0.707106 0.707106 0.0 0.0 ">
-				<inertial pos="0.00272 -1e-05 0.03409 " mass="0.16" diaginertia="2e-05 2e-05 2e-05" />
-				<joint armature="0.0016" name="front_right_hip" pos="0 0 0" axis="0 0 1" limited="true" range="-2.35619 2.87979 " />
-				<geom pos="0.00272 -1e-05 0.03409 " type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.007" />
+			<body name="front_right_hip" pos="0.085 -0.05 0" quat="0.707106 0.707106 0 0">
+				<inertial pos="0.00272 -1e-05 0.03409" mass="0.16" fullinertia="2e-05 2e-05 2e-05 0 0 0" />
+				<joint armature="0.0016" name="front_right_hip" pos="0 0 0" axis="0 0 1" limited="true" range="-2.35619 2.87979" />
+				<geom pos="0.00272 -1e-05 0.03409" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.007" />
 				<body name="front_right_upper" pos="0 0 0.038" quat="0.499998 -0.5 -0.500002 0.5">
-					<inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
+					<inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05 0 0 0" />
 					<joint armature="0.0016" name="front_right_upper" pos="0 0 0" axis="0 0 1" limited="true" range="-0.69813 1.5708" />
-					<geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.005" />
+					<geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.010" />
 					<geom size="0.025" pos="-0.0607 -0.005 0.07062" />
 					<body name="front_right_lower" pos="-0.0607 0 0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
-						<inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
+						<inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05 0 0 0" />
 						<joint armature="0.0016" name="front_right_lower" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 1.20428" />
 						<geom pos="0.08114 -0.0073 0.01746" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.006" />
-						<geom size="0.01984" pos="0.09946 -0.0107 0.0169" />
+						<geom size="0.01984" pos="right left" />
 					</body>
 				</body>
 			</body>
-			<body name="front_left_hip" pos="0.085 0.05 0" quat="-0.707106 0.707106 0.0 0.0 ">
-				<inertial pos="0.00272 1e-05 0.03409 " mass="0.16" diaginertia="2e-05 2e-05 2e-05" />
-				<joint armature="0.0016" name="front_left_hip" pos="0 0 0" axis="0 0 1" limited="true" range="2.87979 -2.35619 " />
-				<geom pos="0.00272 1e-05 0.03409 " type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.003" />
-				<body name="front_left_upper" pos="0 0 0.038" quat="0.499998 -0.5 -0.500002 0.5">
-					<inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
-					<joint armature="0.0016" name="front_left_upper" pos="0 0 0" axis="0 0 1" limited="true" range="-0.69813 1.5708" />
-					<geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.005" />
-					<geom size="0.025" pos="-0.0607 -0.005 0.07062" />
-					<body name="front_left_lower" pos="-0.0607 0 0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
-						<inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
-						<joint armature="0.0016" name="front_left_lower" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 1.20428" />
-						<geom pos="0.08114 -0.0073 0.01746" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.006" />
-						<geom size="0.01984" pos="0.09946 -0.0107 0.0169" />
+			<body name="front_left_hip" pos="0.085 0.05 0.0" quat="-0.707106 0.707106 0.0 0.0">
+				<inertial pos="0.00272 1e-05 0.03409" mass="0.16" fullinertia="2e-05 2e-05 2e-05 -0.0 0.0 -0.0" />
+				<joint armature="0.0016" name="front_left_hip" pos="0 0 0" axis="0 0 1" limited="true" range="2.87979 -2.35619" />
+				<geom pos="0.00272 1e-05 0.03409" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.003" />
+				<body name="front_left_upper" pos="0.0 -0.0 0.038" quat="-0.499998 -0.5 -0.500002 0.5">
+					<inertial pos="-0.04555 0.00233 0.05745" quat="-0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05 -0.0 0.0 -0.0" />
+					<joint armature="0.0016" name="front_left_upper" pos="0 0 0" axis="0 0 1" limited="true" range="1.5708 -0.69813" />
+					<geom pos="-0.04555 0.00233 0.05745" quat="-0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.014" />
+					<geom size="0.025" pos="-0.0607 0.005 0.07062" />
+					<body name="front_left_lower" pos="-0.0607 -0.0 0.07062" quat="-0.21263 0.212631 0.674379 -0.674381">
+						<inertial pos="0.08114 0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05 -0.0 0.0 -0.0" />
+						<joint armature="0.0016" name="front_left_lower" pos="0 0 0" axis="0 0 1" limited="true" range="1.20428 -3.14159" />
+						<geom pos="0.08114 0.0073 0.01746" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.002" />
+						<geom size="0.01984" pos="right left" />
 					</body>
 				</body>
 			</body>
-			<body name="back_right_hip" pos="-0.085 -0.05 0" quat="0.707106 0.707106 0.0 0.0 ">
-				<inertial pos="0.00272 -1e-05 0.03409 " mass="0.16" diaginertia="2e-05 2e-05 2e-05" />
-				<joint armature="0.0016" name="back_right_hip" pos="0 0 0" axis="0 0 1" limited="true" range="-2.35619 2.87979 " />
-				<geom pos="0.00272 -1e-05 0.03409 " type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.007" />
+			<body name="back_right_hip" pos="-0.085 -0.05 0" quat="0.707106 0.707106 0 0">
+				<inertial pos="0.00272 -1e-05 0.03409" mass="0.16" fullinertia="2e-05 2e-05 2e-05 0 0 0" />
+				<joint armature="0.0016" name="back_right_hip" pos="0 0 0" axis="0 0 1" limited="true" range="-2.35619 2.87979" />
+				<geom pos="0.00272 -1e-05 0.03409" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.007" />
 				<body name="back_right_upper" pos="0 0 0.038" quat="0.499998 -0.5 -0.500002 0.5">
-					<inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
+					<inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05 0 0 0" />
 					<joint armature="0.0016" name="back_right_upper" pos="0 0 0" axis="0 0 1" limited="true" range="-0.69813 1.5708" />
-					<geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.005" />
+					<geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.010" />
 					<geom size="0.025" pos="-0.0607 -0.005 0.07062" />
 					<body name="back_right_lower" pos="-0.0607 0 0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
-						<inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
+						<inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05 0 0 0" />
 						<joint armature="0.0016" name="back_right_lower" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 1.20428" />
 						<geom pos="0.08114 -0.0073 0.01746" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.006" />
-						<geom size="0.01984" pos="0.09946 -0.0107 0.0169" />
+						<geom size="0.01984" pos="right left" />
 					</body>
 				</body>
 			</body>
-			<body name="back_left_hip" pos="-0.085 0.05 0" quat="-0.707106 0.707106 0.0 0.0 ">
-				<inertial pos="0.00272 1e-05 0.03409 " mass="0.16" diaginertia="2e-05 2e-05 2e-05" />
-				<joint armature="0.0016" name="back_left_hip" pos="0 0 0" axis="0 0 1" limited="true" range="2.87979 -2.35619 " />
-				<geom pos="0.00272 1e-05 0.03409 " type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.003" />
-				<body name="back_left_upper" pos="0 0 0.038" quat="0.499998 -0.5 -0.500002 0.5">
-					<inertial pos="-0.04555 -0.00233 0.05745" quat="0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05" />
-					<joint armature="0.0016" name="back_left_upper" pos="0 0 0" axis="0 0 1" limited="true" range="-0.69813 1.5708" />
-					<geom pos="-0.04555 -0.00233 0.05745" quat="0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.005" />
-					<geom size="0.025" pos="-0.0607 -0.005 0.07062" />
-					<body name="back_left_lower" pos="-0.0607 0 0.07062" quat="0.21263 0.212631 0.674379 -0.674381">
-						<inertial pos="0.08114 -0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05" />
-						<joint armature="0.0016" name="back_left_lower" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 1.20428" />
-						<geom pos="0.08114 -0.0073 0.01746" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.006" />
-						<geom size="0.01984" pos="0.09946 -0.0107 0.0169" />
+			<body name="back_left_hip" pos="-0.085 0.05 0.0" quat="-0.707106 0.707106 0.0 0.0">
+				<inertial pos="0.00272 1e-05 0.03409" mass="0.16" fullinertia="2e-05 2e-05 2e-05 -0.0 0.0 -0.0" />
+				<joint armature="0.0016" name="back_left_hip" pos="0 0 0" axis="0 0 1" limited="true" range="2.87979 -2.35619" />
+				<geom pos="0.00272 1e-05 0.03409" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.003" />
+				<body name="back_left_upper" pos="0.0 -0.0 0.038" quat="-0.499998 -0.5 -0.500002 0.5">
+					<inertial pos="-0.04555 0.00233 0.05745" quat="-0.5 0.5 -0.5 0.5" mass="0.17" diaginertia="2e-05 2e-05 2e-05 -0.0 0.0 -0.0" />
+					<joint armature="0.0016" name="back_left_upper" pos="0 0 0" axis="0 0 1" limited="true" range="1.5708 -0.69813" />
+					<geom pos="-0.04555 0.00233 0.05745" quat="-0.499998 0.5 0.5 -0.500002" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.014" />
+					<geom size="0.025" pos="-0.0607 0.005 0.07062" />
+					<body name="back_left_lower" pos="-0.0607 -0.0 0.07062" quat="-0.21263 0.212631 0.674379 -0.674381">
+						<inertial pos="0.08114 0.0073 0.01746" mass="0.045" diaginertia="2e-05 2e-05 2e-05 -0.0 0.0 -0.0" />
+						<joint armature="0.0016" name="back_left_lower" pos="0 0 0" axis="0 0 1" limited="true" range="1.20428 -3.14159" />
+						<geom pos="0.08114 0.0073 0.01746" type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="ProtoAssembly-MGv25.002" />
+						<geom size="0.01984" pos="right left" />
 					</body>
 				</body>
 			</body>

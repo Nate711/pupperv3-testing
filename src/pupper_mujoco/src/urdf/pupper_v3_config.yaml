@@ -12,39 +12,290 @@ actuator:
 floating_base: true
 friction: 1.0
 hip:
+  com:
+    left:
+    - 0.00272
+    - 1.0e-05
+    - 0.03409
+    right:
+    - 0.00272
+    - -1.0e-05
+    - 0.03409
+  fullinertia:
+    left:
+    - 2.0e-05
+    - 2.0e-05
+    - 2.0e-05
+    - -0.0
+    - 0.0
+    - -0.0
+    right:
+    - 2.0e-05
+    - 2.0e-05
+    - 2.0e-05
+    - 0
+    - 0
+    - 0
+  limits:
+    left:
+    - 2.87979
+    - -2.35619
+    right:
+    - -2.35619
+    - 2.87979
   location:
     back:
-      left: -0.085 0.05 0
-      right: -0.085 -0.05 0
+      left:
+      - -0.085
+      - 0.05
+      - 0.0
+      right:
+      - -0.085
+      - -0.05
+      - 0
     front:
-      left: 0.085 0.05 0
-      right: 0.085 -0.05 0
+      left:
+      - 0.085
+      - 0.05
+      - 0.0
+      right:
+      - 0.085
+      - -0.05
+      - 0
   mass: 0.16
   mesh:
     left: ProtoAssembly-MGv25.003
     right: ProtoAssembly-MGv25.007
-  right_com:
-  - 0.00272
-  - -1.0e-05
-  - 0.03409
-  right_limits:
-  - -2.35619
-  - 2.87979
-  right_mesh_pos:
-  - 0.00272
-  - -1.0e-05
-  - 0.03409
-  right_orientation:
-  - 0.707106
-  - 0.707106
-  - 0
-  - 0
-lower_leg_mass: '0.045'
-lower_link_mesh: ProtoAssembly-MGv25.006
+  mesh_pos:
+    left:
+    - 0.00272
+    - 1.0e-05
+    - 0.03409
+    right:
+    - 0.00272
+    - -1.0e-05
+    - 0.03409
+  orientation:
+    left:
+    - -0.707106
+    - 0.707106
+    - 0.0
+    - 0.0
+    right:
+    - 0.707106
+    - 0.707106
+    - 0
+    - 0
+lower:
+  ball_pos:
+    left:
+    - 0.09946
+    - 0.0107
+    - 0.0169
+    right:
+    - 0.09946
+    - -0.0107
+    - 0.0169
+  ball_size: '0.01984'
+  com:
+    left:
+    - 0.08114
+    - 0.0073
+    - 0.01746
+    right:
+    - 0.08114
+    - -0.0073
+    - 0.01746
+  fullinertia:
+    left:
+    - 2.0e-05
+    - 2.0e-05
+    - 2.0e-05
+    - -0.0
+    - 0.0
+    - -0.0
+    right:
+    - 2.0e-05
+    - 2.0e-05
+    - 2.0e-05
+    - 0
+    - 0
+    - 0
+  limits:
+    left:
+    - 1.20428
+    - -3.14159
+    right:
+    - -3.14159
+    - 1.20428
+  mass: 0.045
+  mesh:
+    left: ProtoAssembly-MGv25.002
+    right: ProtoAssembly-MGv25.006
+  mesh_pos:
+    left:
+    - 0.08114
+    - 0.0073
+    - 0.01746
+    right:
+    - 0.08114
+    - -0.0073
+    - 0.01746
+  orientation:
+    left:
+    - -0.21263
+    - 0.212631
+    - 0.674379
+    - -0.674381
+    right:
+    - 0.21263
+    - 0.212631
+    - 0.674379
+    - -0.674381
+  pos:
+    left:
+    - -0.0607
+    - -0.0
+    - 0.07062
+    right:
+    - -0.0607
+    - 0
+    - 0.07062
 mesh_dir: ../meshes/
-torso_pos:
-- 0
-- 0
-- 0.2
-upper_leg_mass: '0.17'
-upper_leg_mesh: ProtoAssembly-MGv25.005
+torso:
+  collision_pos:
+  - 9.0e-05
+  - 0
+  - 0.02177
+  collision_quat:
+  - 0.707105
+  - 0.707108
+  - 0
+  - 0
+  collision_size:
+  - 0.12009
+  - 0.05097
+  - 0.0575
+  com:
+  - 0
+  - 0
+  - 0
+  fullinertia:
+  - 0.002
+  - 0.002
+  - 0.002
+  - 0
+  - 0
+  - 0
+  mass: 1.6
+  mesh: ProtoAssembly-MGv25.004
+  mesh_orientation:
+  - 0.707105
+  - 0.707108
+  - 0
+  - 0
+  mesh_pos:
+  - -0.0019
+  - -0.00027
+  - 0.02901
+  pos:
+  - 0
+  - 0
+  - 0.2
+upper:
+  ball_pos:
+    left:
+    - -0.0607
+    - 0.005
+    - 0.07062
+    right:
+    - -0.0607
+    - -0.005
+    - 0.07062
+  ball_size: 0.025
+  com:
+    left:
+    - -0.04555
+    - 0.00233
+    - 0.05745
+    right:
+    - -0.04555
+    - -0.00233
+    - 0.05745
+  fullinertia:
+    left:
+    - 2.0e-05
+    - 2.0e-05
+    - 2.0e-05
+    - -0.0
+    - 0.0
+    - -0.0
+    right:
+    - 2.0e-05
+    - 2.0e-05
+    - 2.0e-05
+    - 0
+    - 0
+    - 0
+  inertia_orientation:
+    left:
+    - -0.5
+    - 0.5
+    - -0.5
+    - 0.5
+    right:
+    - 0.5
+    - 0.5
+    - -0.5
+    - 0.5
+  limits:
+    left:
+    - 1.5708
+    - -0.69813
+    right:
+    - -0.69813
+    - 1.5708
+  mass: 0.17
+  mesh:
+    left: ProtoAssembly-MGv25.014
+    right: ProtoAssembly-MGv25.010
+  mesh_orientation:
+    left:
+    - -0.499998
+    - 0.5
+    - 0.5
+    - -0.500002
+    right:
+    - 0.499998
+    - 0.5
+    - 0.5
+    - -0.500002
+  mesh_pos:
+    left:
+    - -0.04555
+    - 0.00233
+    - 0.05745
+    right:
+    - -0.04555
+    - -0.00233
+    - 0.05745
+  orientation:
+    left:
+    - -0.499998
+    - -0.5
+    - -0.500002
+    - 0.5
+    right:
+    - 0.499998
+    - -0.5
+    - -0.500002
+    - 0.5
+  pos:
+    left:
+    - 0.0
+    - -0.0
+    - 0.038
+    right:
+    - 0
+    - 0
+    - 0.038
