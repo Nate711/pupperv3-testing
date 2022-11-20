@@ -5,6 +5,9 @@
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <mutex>
 #include <memory>
+#include <chrono>
+
+#define duration_ns(t) std::chrono::duration_cast<std::chrono::nanoseconds>(t).count()
 
 using std::placeholders::_1;
 
@@ -20,6 +23,7 @@ MujocoNode::MujocoNode(std::vector<std::string> joint_names,
     this->declare_parameter<std::string>("model_xml", "");
     this->declare_parameter<bool>("floating_base", false);
     this->declare_parameter<float>("timestep", 0.004);
+    this->declare_parameter<bool>("publish_step_rate", false);
 
     std::string model_xml = this->get_parameter("model_xml").as_string();
     bool floating_base = this->get_parameter("floating_base").as_bool();
@@ -27,6 +31,7 @@ MujocoNode::MujocoNode(std::vector<std::string> joint_names,
     float publish_rate = this->get_parameter("publish_rate").as_double();
     float sim_step_rate = this->get_parameter("sim_step_rate").as_double();
     float sim_render_rate = this->get_parameter("sim_render_rate").as_double();
+    pub_step_rate_ = this->get_parameter("publish_step_rate").as_bool();
 
     core_ = std::make_unique<MujocoCore>(model_xml.c_str(), floating_base, timestep);
 
@@ -106,6 +111,12 @@ MujocoNode::MujocoNode(std::vector<std::string> joint_names,
     // code is in the test file.
     // FAILS: commands and states not published and received at fast enough rate
     start_ = this->get_clock()->now();
+    last_sim_step_ = std::chrono::high_resolution_clock::now();
+
+    if (pub_step_rate_)
+    {
+        sim_rate_tracker_ = this->create_publisher<builtin_interfaces::msg::Duration>("/sim_step_period", rclcpp::SensorDataQoS());
+    }
 }
 
 void MujocoNode::step()
@@ -128,6 +139,17 @@ void MujocoNode::step()
     }
     core_->set_actuator_torques(actuator_torques_);
     core_->single_step(); // todo split across step1 and step2. otherwise not taking advantage of new state
+
+    if (pub_step_rate_)
+    {
+        auto step_ts = std::chrono::high_resolution_clock::now();
+        auto delta = duration_ns(step_ts - last_sim_step_);
+        last_sim_step_ = step_ts;
+        builtin_interfaces::msg::Duration d;
+        d.sec = delta / 1000000000;
+        d.nanosec = delta % 1000000000;
+        sim_rate_tracker_->publish(d);
+    }
 }
 
 void MujocoNode::blocking_step_render()
@@ -229,16 +251,7 @@ void MujocoNode::joint_state_publish_callback()
     joint_state_message_.header.stamp = this->get_clock()->now();
     joint_state_message_.position = core_->actuator_positions(); // slower than mem copy?
     joint_state_message_.velocity = core_->actuator_velocities();
-
-    // Causes double free or corruption when ctrl-c physics step
-    // And segmentation fault on rendering
-    // std::copy(std::begin(robot_emulator_.actuator_positions()),
-    //           std::end(robot_emulator_.actuator_positions()),
-    //           std::begin(joint_state_message_.position));
-    // std::copy(std::begin(robot_emulator_.actuator_velocities()),
-    //           std::end(robot_emulator_.actuator_velocities()),
-    //           std::begin(joint_state_message_.velocity));
-
+    joint_state_message_.effort = core_->actuator_efforts();
     publisher_->publish(joint_state_message_);
 
     body_tf_.header.stamp = this->get_clock()->now();

@@ -30,6 +30,7 @@ public:
 
     virtual mjtNum *qpos() = 0;
     virtual mjtNum *qvel() = 0;
+    virtual mjtNum *ctrl() = 0;
 
     MujocoBase(bool floating_base, float timestep) : floating_base_(floating_base), timestep_(timestep)
     {
@@ -41,12 +42,19 @@ public:
         int start_idx = floating_base_ ? kOrientationVars + kPositionVars : 0;
         return std::vector<double>(qpos() + start_idx, qpos() + start_idx + n_actuators_);
     }
+
     std::vector<double> actuator_velocities()
     {
         // std::unique_lock<std::mutex> lock(protect_model_data_);
         int start_idx = floating_base_ ? kBaseVelocityVars : 0;
         return std::vector<double>(qvel() + start_idx, qvel() + start_idx + n_actuators_);
     }
+
+    std::vector<double> actuator_efforts()
+    {
+        return std::vector<double>(ctrl(), ctrl() + n_actuators_);
+    }
+
     std::array<double, 4> base_orientation()
     {
         // std::unique_lock<std::mutex> lock(protect_model_data_);
@@ -71,6 +79,7 @@ public:
             return {0.0, 0.0, 0.0};
         }
     }
+
     std::array<double, 3> base_angular_velocity()
     {
         // std::unique_lock<std::mutex> lock(protect_model_data_);
@@ -83,6 +92,7 @@ public:
             return {0.0, 0.0, 0.0};
         }
     }
+
     std::array<double, 3> base_velocity()
     {
         // std::unique_lock<std::mutex> lock(protect_model_data_);

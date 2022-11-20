@@ -44,10 +44,10 @@ struct ActuatorParams
     }
 };
 
-class ActuatorModel : public ActuatorModelInterface
+class PIDActuatorModel : public ActuatorModelInterface
 {
 public:
-    ActuatorModel(ActuatorParams actuator_params) : params_(actuator_params)
+    PIDActuatorModel(ActuatorParams actuator_params) : params_(actuator_params)
     {
     }
     double run(num_t kp,                // Nm/rad

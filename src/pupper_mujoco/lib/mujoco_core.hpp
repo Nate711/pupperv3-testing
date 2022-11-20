@@ -29,6 +29,7 @@ public:
     int n_actuators();
     mjtNum *qvel();
     mjtNum *qpos();
+    mjtNum *ctrl();
 
 private:
     void initialize(const char *model_name);

@@ -129,8 +129,16 @@
         </body>
       </body>
 
+      <site name="torso_imu_site" pos="0 0 0"/>
+
     </body>
   </worldbody>
+
+  <sensor>
+    <gyro name="body_gyro" site="torso_imu_site"/>
+    <accelerometer name="body_acc" site="torso_imu_site"/>
+  </sensor>
+
   <actuator>
     <motor gear="1" joint="leg_front_r_1" name="leg_front_r_1" />
     <motor gear="1" joint="leg_front_r_2" name="leg_front_r_2" />

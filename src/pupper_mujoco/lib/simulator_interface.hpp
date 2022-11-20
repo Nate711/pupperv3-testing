@@ -15,6 +15,7 @@ public:
     virtual int n_actuators() = 0;
     virtual std::vector<double> actuator_positions() = 0;
     virtual std::vector<double> actuator_velocities() = 0;
+    virtual std::vector<double> actuator_efforts() = 0;
     virtual std::array<double, 3> base_position() = 0;
     virtual std::array<double, 4> base_orientation() = 0;
     virtual std::array<double, 3> base_velocity() = 0;

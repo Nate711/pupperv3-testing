@@ -193,6 +193,10 @@ mjtNum *MujocoCore::qvel()
 {
     return data->qvel;
 }
+mjtNum *MujocoCore::ctrl()
+{
+    return data->ctrl;
+}
 
 void MujocoCore::single_step()
 {

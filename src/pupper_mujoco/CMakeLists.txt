@@ -16,6 +16,7 @@ find_package(mujoco REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pupper_interfaces)
+find_package(builtin_interfaces REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/lib)
 
@@ -46,13 +47,30 @@ ament_target_dependencies(
   sensor_msgs
   pupper_interfaces
   tf2
-  tf2_ros)
+  tf2_ros
+  builtin_interfaces)
+
+add_library(mujoco_interactive_node lib/mujoco_interactive_node.cpp)
+target_link_libraries(mujoco_interactive_node mujoco::mujoco glfw)
+ament_target_dependencies(
+  mujoco_interactive_node
+  rclcpp
+  std_msgs
+  sensor_msgs
+  pupper_interfaces
+  tf2
+  tf2_ros
+  builtin_interfaces
+)
 
 add_executable(mujoco_core_test src/mujoco_core_test.cpp)
 target_link_libraries(mujoco_core_test mujoco_core)
 
 add_executable(mujoco_node_test src/mujoco_node_test.cpp)
 target_link_libraries(mujoco_node_test mujoco_node)
+
+add_executable(mujoco_interactive_test src/mujoco_interactive_test.cpp)
+target_link_libraries(mujoco_interactive_test mujoco_interactive_node)
 
 install(TARGETS basic DESTINATION lib/${PROJECT_NAME})
 install(TARGETS simulate DESTINATION lib/${PROJECT_NAME})
