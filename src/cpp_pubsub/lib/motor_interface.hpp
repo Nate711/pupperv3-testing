@@ -41,13 +41,14 @@ struct CommonResponse
     int16_t encoder_counts = 0;          // counts (-2^15-1 to 2^15)
     int16_t previous_encoder_counts = 0; // previous counts
     float velocity_degs = 0.0;           // degs per sec
-    float velocity_rads = 0.0;           // degs per sec
+    float velocity_rads = 0.0;           // rads per sec
     float current = 0.0;                 // Amps
     uint8_t temp = 0;                    // C
 
-    int32_t rotations = 0;        // motor rotations (post-processed)
-    float multi_loop_angle = 0.0; // degs (post-processed)
-    float output_radians = 0.0;   // degs (post-processed)
+    int32_t rotations = 0;              // motor rotations (post-processed)
+    float multi_loop_angle = 0.0;       // degs (post-processed)
+    float output_rads = 0.0;         // rads (post-processed)
+    float output_rads_per_sec = 0.0; // rads per sec
 };
 
 struct MultiLoopAngleResponse

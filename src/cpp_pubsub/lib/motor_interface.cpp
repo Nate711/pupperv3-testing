@@ -200,7 +200,7 @@ void MOTOR_INTERFACE::update_rotation(CommonResponse &common)
     }
     common.previous_encoder_counts = common.encoder_counts;
     common.multi_loop_angle = (common.rotations + (float)common.encoder_counts / kEncoderCountsPerRot) * 360.0;
-    common.output_radians = common.multi_loop_angle * kSpeedReduction * DEG_TO_RAD;
+    common.output_rads = common.multi_loop_angle * kSpeedReduction * DEG_TO_RAD;
 }
 
 TEMPLATE_HEADER
@@ -296,6 +296,7 @@ void MOTOR_INTERFACE::torque_velocity_update(CANChannel bus,
         common.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
         common.velocity_degs = speed_raw;
         common.velocity_rads = common.velocity_degs * DEG_TO_RAD;
+        common.output_rads_per_sec = common.velocity_rads * kSpeedReduction;
         common.encoder_counts = encoder_counts;
         update_rotation(common);
     }

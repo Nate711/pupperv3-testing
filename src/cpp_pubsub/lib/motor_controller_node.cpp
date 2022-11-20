@@ -98,7 +98,6 @@ void MotorControllerNode::publish_callback()
 {
     // Must receive a joint command message to make latest_joint_command_ non-zero
     // TODO: add watchdog
-    // TODO: log warning if zero
     if (latest_joint_command_.position_target.size() == 0)
     {
         RCLCPP_WARN(this->get_logger(),
@@ -110,25 +109,23 @@ void MotorControllerNode::publish_callback()
                 "Commanding %lu motors on %lu buses.",
                 latest_joint_command_.position_target.size(),
                 motor_position_targets.size());
-    // RCLCPP_INFO(this->get_logger(), motor_position_targets);            
+    // RCLCPP_INFO(this->get_logger(), motor_position_targets);
     motor_controller_.position_control(motor_position_targets);
 
     RCLCPP_INFO(this->get_logger(), "Publishing joint states");
     auto latest_data = motor_controller_.motor_data_copy();
     joint_state_message_.header.stamp = now();
-    joint_state_message_.position.at(0) = latest_data.at(0).at(0).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(1) = latest_data.at(0).at(1).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(2) = latest_data.at(0).at(2).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(3) = latest_data.at(0).at(3).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(4) = latest_data.at(0).at(4).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(5) = latest_data.at(0).at(5).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(6) = latest_data.at(1).at(0).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(7) = latest_data.at(1).at(1).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(8) = latest_data.at(1).at(2).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(9) = latest_data.at(1).at(3).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(10) = latest_data.at(1).at(4).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
-    joint_state_message_.position.at(11) = latest_data.at(1).at(5).common.multi_loop_angle * M_DEG_TO_RAD * M_GEAR_RATIO;
 
+    for (size_t i = 0; i < joint_state_message_.velocity.size(); i++)
+    {
+        int bus_id = i / K_SERVOS_PER_CHANNEL;
+        int motor_id = i % K_SERVOS_PER_CHANNEL;
+        joint_state_message_.position.at(i) = latest_data.at(bus_id).at(motor_id).common.output_rads;
+        joint_state_message_.velocity.at(i) = latest_data.at(bus_id).at(motor_id).common.velocity_rads * M_GEAR_RATIO;
+        
+        // TODO: make Nm
+        joint_state_message_.effort.at(i) = latest_data.at(bus_id).at(motor_id).common.current;
+    }
     // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
     publisher_->publish(joint_state_message_);
 }
