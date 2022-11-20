@@ -80,9 +80,7 @@ struct
   int color = 0;
   int font = 0;
   int ui0 = 1;
-  // int ui1 = 1;
-  // int ui0 = 0;
-  int ui1 = 0;
+  int ui1 = 1;
   int help = 0;
   int info = 0;
   int profiler = 0;
@@ -819,6 +817,12 @@ void makerendering(int oldstate)
     mju::strcpy_arr(defFlag[0].name, mjRNDSTRING[i][0]);
     mju::sprintf_arr(defFlag[0].other, " %s", mjRNDSTRING[i][2]);
     defFlag[0].pdata = scn.flags + i;
+    std::cout << "Flag: " << i << " of " << mjNRNDFLAG << std::endl;
+    std::cout << defFlag[0].name << defFlag[0].other << std::endl;
+    if(i == 9) {
+      std::cout << "Skipping flag 10 to prevent crash" << std::endl;
+      continue;
+    }
     mjui_add(&ui0, defFlag);
   }
 }
@@ -1019,7 +1023,7 @@ void makesections(void)
 
   // make
   makephysics(oldstate0[SECT_PHYSICS]);
-  // makerendering(oldstate0[SECT_RENDERING]);
+  makerendering(oldstate0[SECT_RENDERING]);
   makegroup(oldstate0[SECT_GROUP]);
   makejoint(oldstate1[SECT_JOINT]);
   makecontrol(oldstate1[SECT_CONTROL]);
@@ -2263,19 +2267,6 @@ int main(int argc, const char **argv)
   {
     // start exclusive access (block simulation thread)
     mtx.lock();
-
-    // debug print qpos
-    // printf("%d\n", m->nq);
-    if (m)
-    {
-      std::cout << m->nq << ": ";
-      for (int i = 0; i < m->nq; i++)
-      {
-        printf("%0.3f ", d->qpos[i]);
-        // std::cout << d->qpos[i] << " ";
-      }
-      std::cout << std::endl;
-    }
 
     // load model (not on first pass, to show "loading" label)
     if (settings.loadrequest == 1)
