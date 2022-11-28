@@ -21,13 +21,16 @@ class MujocoInteractiveNode : public rclcpp::Node
 public:
     MujocoInteractiveNode(std::vector<std::string> joint_names,
                           std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models);
-
+    void start_simulation();
+    void gui_loop();
 private:
+    void make_pub_subs(const float publish_rate);
+    void allocate_messages(const std::vector<std::string> &joint_names, const unsigned int &n_actuators);
     void joint_state_publish_callback();
     void joint_command_callback(const pupper_interfaces::msg::JointCommand &msg);
 
-    // Underlying simulator
-    std::shared_ptr<MujocoCoreInteractive> core_interactive_;
+    // Mujoco sim
+    std::unique_ptr<std::thread> simulate_thread_;
 
     // Actuator models
     std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models_;

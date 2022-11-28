@@ -29,9 +29,8 @@
 #include "array_safety.h"
 namespace mju = ::mujoco::sample_util;
 
-class MujocoCoreInteractive
+namespace mujoco_interactive
 {
-private:
   //-------------------------------- global -----------------------------------------------
 
   static constexpr int kBufSize = 1000;
@@ -42,7 +41,7 @@ private:
   static const double refreshfactor = 0.7;   // fraction of refresh available for simulation
   static const int max_slow_down = 128;      // maximum slow-down quotient
   static const double zoom_increment = 0.02; // ratio of single click-wheel zoom increment to vertical extent
-  // model and data
+                                             // model and data
   static mjModel *m = NULL;
   static mjData *d = NULL;
   // strings
@@ -72,7 +71,7 @@ private:
   static mjUI ui0, ui1;
 
   // UI settings not contained in MuJoCo structures
-  struct
+  static struct
   {
     // file
     int exitrequest = 0;
@@ -132,7 +131,7 @@ private:
   };
 
   // file section of UI
-  const mjuiDef defFile[] = {
+  static const mjuiDef defFile[] = {
       {mjITEM_SECTION, "File", 1, NULL, "AF"},
       {mjITEM_BUTTON, "Save xml", 2, NULL, ""},
       {mjITEM_BUTTON, "Save mjb", 2, NULL, ""},
@@ -142,7 +141,7 @@ private:
       {mjITEM_END}};
 
   // option section of UI
-  const mjuiDef defOption[] = {
+  static const mjuiDef defOption[] = {
       {mjITEM_SECTION, "Option", 1, NULL, "AO"},
       {mjITEM_SELECT, "Spacing", 1, &settings.spacing, "Tight\nWide"},
       {mjITEM_SELECT, "Color", 1, &settings.color, "Default\nOrange\nWhite\nBlack"},
@@ -163,7 +162,7 @@ private:
       {mjITEM_END}};
 
   // simulation section of UI
-  const mjuiDef defSimulation[] = {
+  static const mjuiDef defSimulation[] = {
       {mjITEM_SECTION, "Simulation", 1, NULL, "AS"},
       {mjITEM_RADIO, "", 2, &settings.run, "Pause\nRun"},
       {mjITEM_BUTTON, "Reset", 2, NULL, " #259"},
@@ -178,7 +177,7 @@ private:
       {mjITEM_END}};
 
   // watch section of UI
-  const mjuiDef defWatch[] = {
+  static const mjuiDef defWatch[] = {
       {mjITEM_SECTION, "Watch", 0, NULL, "AW"},
       {mjITEM_EDITTXT, "Field", 2, settings.field, "qpos"},
       {mjITEM_EDITINT, "Index", 2, &settings.index, "1"},
@@ -186,7 +185,7 @@ private:
       {mjITEM_END}};
 
   // help strings
-  const char help_content[] =
+  static const char help_content[] =
       "Space\n"
       "+  -\n"
       "Right arrow\n"
@@ -209,7 +208,7 @@ private:
       "UI right hold\n"
       "UI title double-click";
 
-  const char help_title[] =
+  static const char help_title[] =
       "Play / Pause\n"
       "Speed up / down\n"
       "Step\n"
@@ -233,13 +232,13 @@ private:
       "Expand/collapse all";
 
   // info strings
-  char info_title[kBufSize];
-  char info_content[kBufSize];
+  static char info_title[kBufSize];
+  static char info_content[kBufSize];
 
   //-------------------------------- profiler, sensor, info, watch -----------------------------------
 
   // init profiler figures
-  void profilerinit(void)
+  static void profilerinit(void)
   {
     int i, n;
 
@@ -336,7 +335,7 @@ private:
   }
 
   // update profiler figures
-  void profilerupdate(void)
+  static void profilerupdate(void)
   {
     int i, n;
 
@@ -456,7 +455,7 @@ private:
   }
 
   // show profiler figures
-  void profilershow(mjrRect rect)
+  static void profilershow(mjrRect rect)
   {
     mjrRect viewport = {
         rect.left + rect.width - rect.width / 4,
@@ -473,7 +472,7 @@ private:
   }
 
   // init sensor figure
-  void sensorinit(void)
+  static void sensorinit(void)
   {
     // set figure to default
     mjv_defaultFigure(&figsensor);
@@ -502,7 +501,7 @@ private:
   }
 
   // update sensor figure
-  void sensorupdate(void)
+  static void sensorupdate(void)
   {
     static const int maxline = 10;
 
@@ -557,7 +556,7 @@ private:
   }
 
   // show sensor figure
-  void sensorshow(mjrRect rect)
+  static void sensorshow(mjrRect rect)
   {
     // constant width with and without profiler
     int width = settings.profiler ? rect.width / 3 : rect.width / 4;
@@ -572,7 +571,7 @@ private:
   }
 
   // prepare info text
-  void infotext(char (&title)[kBufSize], char (&content)[kBufSize], double interval)
+  static void infotext(char (&title)[kBufSize], char (&content)[kBufSize], double interval)
   {
     char tmp[20];
 
@@ -623,13 +622,13 @@ private:
   }
 
   // sprintf forwarding, to avoid compiler warning in x-macro
-  void printfield(char (&str)[mjMAXUINAME], void *ptr)
+  static void printfield(char (&str)[mjMAXUINAME], void *ptr)
   {
     mju::sprintf_arr(str, "%g", *(mjtNum *)ptr);
   }
 
   // update watch
-  void watch(void)
+  static void watch(void)
   {
     // clear
     ui0.sect[SECT_WATCH].item[2].multi.nelem = 1;
@@ -661,7 +660,7 @@ private:
   //---------------------------------- UI construction -----------------------------------------------
 
   // make physics section of UI
-  void makephysics(int oldstate)
+  static void makephysics(int oldstate)
   {
     int i;
 
@@ -726,7 +725,7 @@ private:
   }
 
   // make rendering section of UI
-  void makerendering(int oldstate)
+  static void makerendering(int oldstate)
   {
     int i, j;
 
@@ -831,7 +830,7 @@ private:
   }
 
   // make group section of UI
-  void makegroup(int oldstate)
+  static void makegroup(int oldstate)
   {
     mjuiDef defGroup[] = {
         {mjITEM_SECTION, "Group enable", oldstate, NULL, "AG"},
@@ -884,7 +883,7 @@ private:
   }
 
   // make joint section of UI
-  void makejoint(int oldstate)
+  static void makejoint(int oldstate)
   {
     int i;
 
@@ -941,7 +940,7 @@ private:
   }
 
   // make control section of UI
-  void makecontrol(int oldstate)
+  static void makecontrol(int oldstate)
   {
     int i;
 
@@ -994,7 +993,7 @@ private:
   }
 
   // make model-dependent UI sections
-  void makesections(void)
+  static void makesections(void)
   {
     int i;
 
@@ -1035,7 +1034,7 @@ private:
   //---------------------------------- utility functions ---------------------------------------------
 
   // align and scale view
-  void alignscale(void)
+  static void alignscale(void)
   {
     // autoscale
     cam.lookat[0] = m->stat.center[0];
@@ -1048,7 +1047,7 @@ private:
   }
 
   // copy qpos to clipboard as key
-  void copykey(void)
+  static void copykey(void)
   {
     char clipboard[5000] = "<key qpos='";
     char buf[200];
@@ -1066,13 +1065,13 @@ private:
   }
 
   // millisecond timer, for MuJoCo built-in profiler
-  mjtNum timer(void)
+  static mjtNum timer(void)
   {
     return (mjtNum)(1000 * glfwGetTime());
   }
 
   // clear all times
-  void cleartimers(void)
+  static void cleartimers(void)
   {
     for (int i = 0; i < mjNTIMER; i++)
     {
@@ -1082,7 +1081,7 @@ private:
   }
 
   // copy current camera to clipboard as MJCF specification
-  void copycamera(mjvGLCamera *camera)
+  static void copycamera(mjvGLCamera *camera)
   {
     char clipboard[500];
     mjtNum cam_right[3];
@@ -1108,7 +1107,7 @@ private:
   }
 
   // update UI 0 when MuJoCo structures change (except for joint sliders)
-  void updatesettings(void)
+  static void updatesettings(void)
   {
     int i;
 
@@ -1141,7 +1140,7 @@ private:
   }
 
   // drop file callback
-  void drop(GLFWwindow *window, int count, const char **paths)
+  static void drop(GLFWwindow *window, int count, const char **paths)
   {
     // make sure list is non-empty
     if (count > 0)
@@ -1152,7 +1151,7 @@ private:
   }
 
   // load mjb or xml model
-  void loadmodel(void)
+  static void loadmodel(void)
   {
     // clear request
     settings.loadrequest = 0;
@@ -1259,7 +1258,7 @@ private:
   //---------------------------------- UI hooks (for uitools.c) --------------------------------------
 
   // determine enable/disable item state given category
-  int uiPredicate(int category, void *userdata)
+  static int uiPredicate(int category, void *userdata)
   {
     switch (category)
     {
@@ -1278,7 +1277,7 @@ private:
   }
 
   // set window layout
-  void uiLayout(mjuiState *state)
+  static void uiLayout(mjuiState *state)
   {
     mjrRect *rect = state->rect;
 
@@ -1324,7 +1323,7 @@ private:
 #endif
 
   // handle UI event
-  void uiEvent(mjuiState *state)
+  static void uiEvent(mjuiState *state)
   {
     int i;
     char err[200];
@@ -1871,10 +1870,10 @@ private:
   //---------------------------------- rendering and simulation --------------------------------------
 
   // sim thread synchronization
-  std::mutex mtx;
+  static std::mutex mtx;
 
   // prepare to render
-  void prepare(void)
+  static void prepare(void)
   {
     // data for FPS calculation
     static double lastupdatetm = 0;
@@ -1936,7 +1935,7 @@ private:
   }
 
   // render im main thread (while simulating in background thread)
-  void render(GLFWwindow *window)
+  static void render(GLFWwindow *window)
   {
     // get 3D rectangle and reduced for profiler
     mjrRect rect = uistate.rect[3];
@@ -2051,7 +2050,7 @@ private:
   }
 
   // simulate in background thread (while rendering in main thread)
-  void simulate(void)
+  static void simulate(void)
   {
     // cpu-sim syncronization point
     double cpusync = 0;
@@ -2162,7 +2161,7 @@ private:
   //---------------------------------- init and main -------------------------------------------------
 
   // initalize everything
-  void init(void)
+  static void init(void)
   {
     // print version, check compatibility
     std::printf("MuJoCo version %s\n", mj_versionString());
@@ -2250,36 +2249,144 @@ private:
   }
 
   /* -------------------- BEGIN INTERACE ---------------------- */
+
+  static const unsigned int kOrientationVars = 4;
+  static const unsigned int kPositionVars = 3;
+  static const unsigned int kBaseVelocityVars = 3;
+
+  static bool gui_is_alive()
+  {
+    return !glfwWindowShouldClose(mujoco_interactive::window) && !mujoco_interactive::settings.exitrequest;
+  }
+
+  static void render_block()
+  {
+    mtx.lock();
+    glfwPollEvents();
+    prepare();
+    mtx.unlock();
+    render(window);
+  }
+
+  static void free_data()
+  {
+    uiClearCallback(mujoco_interactive::window);
+    free(mujoco_interactive::ctrlnoise);
+    mj_deleteData(mujoco_interactive::d);
+    mj_deleteModel(mujoco_interactive::m);
+    mjv_freeScene(&mujoco_interactive::scn);
+    mjr_freeContext(&mujoco_interactive::con);
+#if defined(__APPLE__) || defined(_WIN32)
+    glfwTerminate();
+#endif
+  }
+
+  static bool floating_base()
+  {
+    if (m)
+    {
+      return m->nq != m->nu;
+    }
+    else
+    {
+      throw std::runtime_error("floating_base: Model does not exist");
+    }
+  }
+
   // TODO: put in another layer above?
-public:
-  int n_actuators() const
+  static int n_actuators()
   {
-    return m->nu;
+    if (m)
+    {
+      return m->nu;
+    }
+    else
+    {
+      throw std::runtime_error("n_actuators: Model does not exist");
+    }
   }
 
-  float sim_time() const
+  static float sim_time()
   {
-    return d->time;
+    if (d)
+    {
+      return d->time;
+    }
+    else
+    {
+      throw std::runtime_error("sim_time: Model data does not exist.");
+    }
   }
 
-  std::vector<double> actuator_positions()
+  static std::vector<double> actuator_positions()
   {
+    std::unique_lock<std::mutex> lock(mtx);
+    int start_idx = floating_base() ? kOrientationVars + kPositionVars : 0;
+    return std::vector<double>(d->qpos + start_idx, d->qpos + start_idx + n_actuators());
   }
 
-  std::vector<double> actuator_velocities()
+  static std::vector<double> actuator_velocities()
   {
+    std::unique_lock<std::mutex> lock(mtx);
+    int start_idx = floating_base() ? kBaseVelocityVars : 0;
+    return std::vector<double>(d->qvel + start_idx, d->qvel + start_idx + n_actuators());
   }
 
-  std::vector<double> actuator_efforts()
+  static std::vector<double> actuator_efforts()
   {
+    std::unique_lock<std::mutex> lock(mtx);
+    return std::vector<double>(d->ctrl, d->ctrl + n_actuators());
   }
 
-  std::array<double, 3> base_position()
+  static std::array<double, 4> base_orientation()
   {
+    std::unique_lock<std::mutex> lock(mtx);
+    if (floating_base())
+    {
+      return {d->qpos[3], d->qpos[4], d->qpos[5], d->qpos[6]};
+    }
+    else
+    {
+      return {1.0, 0.0, 0.0, 0.0};
+    }
+  }
+  static std::array<double, 3> base_position()
+  {
+    std::unique_lock<std::mutex> lock(mtx);
+    if (floating_base())
+    {
+      return {d->qpos[0], d->qpos[1], d->qpos[2]};
+    }
+    else
+    {
+      return {0.0, 0.0, 0.0};
+    }
   }
 
-  std::array<double, 4> base_orientation()
+  static std::array<double, 3> base_angular_velocity()
   {
+    std::unique_lock<std::mutex> lock(mtx);
+    if (floating_base())
+    {
+      return {d->qvel[3], d->qvel[4], d->qvel[5]};
+    }
+    else
+    {
+      return {0.0, 0.0, 0.0};
+    }
+  }
+
+  static std::array<double, 3> base_velocity()
+  {
+    std::unique_lock<std::mutex> lock(mtx);
+    if (floating_base())
+    {
+      return {d->qvel[0], d->qvel[1], d->qvel[2]};
+    }
+    else
+    {
+      return {0.0, 0.0, 0.0};
+    }
   }
 };
 

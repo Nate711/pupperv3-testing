@@ -6,6 +6,7 @@
 #include <mutex>
 #include <memory>
 #include <chrono>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #define duration_ns(t) std::chrono::duration_cast<std::chrono::nanoseconds>(t).count()
 
@@ -17,49 +18,48 @@ MujocoInteractiveNode::MujocoInteractiveNode(std::vector<std::string> joint_name
                                              std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models) : Node("mujoco_node"),
                                                                                                                      actuator_models_(actuator_models)
 {
+    std::string share_dir = ament_index_cpp::get_package_share_directory("pupper_mujoco");
+    std::string default_urdf = share_dir + "/src/urdf/pupper_v3_fixed_base.xml";
+
+    this->declare_parameter<std::string>("model_xml", default_urdf);
+    this->declare_parameter<float>("timestep", 0.004); // TODO: currently unused
     this->declare_parameter<float>("publish_rate", 500.0);
-    this->declare_parameter<float>("sim_step_rate", 250.0);
-    this->declare_parameter<float>("sim_render_rate", 30.0);
-    this->declare_parameter<std::string>("model_xml", "");
-    this->declare_parameter<bool>("floating_base", false);
-    this->declare_parameter<float>("timestep", 0.004);
-    this->declare_parameter<bool>("publish_step_rate", false);
 
     std::string model_xml = this->get_parameter("model_xml").as_string();
-    bool floating_base = this->get_parameter("floating_base").as_bool();
     float timestep = this->get_parameter("timestep").as_double();
     float publish_rate = this->get_parameter("publish_rate").as_double();
-    float sim_step_rate = this->get_parameter("sim_step_rate").as_double();
-    float sim_render_rate = this->get_parameter("sim_render_rate").as_double();
-    pub_step_rate_ = this->get_parameter("publish_step_rate").as_bool();
 
-    core_interactive_ = std::make_shared<MujocoCoreInteractive>();//model_xml.c_str(), floating_base, timestep);
+    // Set up mujoco simulation
+    mujoco_interactive::init();
+    mju::strcpy_arr(mujoco_interactive::filename, model_xml.c_str());
+    mujoco_interactive::settings.loadrequest = 1;
+    mujoco_interactive::loadmodel();
 
-    n_actuators_ = core_interactive_->n_actuators();
-    RCLCPP_INFO(this->get_logger(), "n_actuators= %d", n_actuators_);
+    n_actuators_ = mujoco_interactive::n_actuators();
+    RCLCPP_INFO(this->get_logger(), "n_actuators = %d", n_actuators_);
 
-    // initialize torques
-    actuator_torques_ = std::vector<double>(n_actuators_, 0.0);
+    // Prepare node data
+    allocate_messages(joint_names, n_actuators_);
 
-    // initialize joint message
-    joint_state_message_.name = joint_names;
-    joint_state_message_.position = std::vector<double>(n_actuators_, 0.0);
-    joint_state_message_.velocity = std::vector<double>(n_actuators_, 0.0);
-    joint_state_message_.effort = std::vector<double>(n_actuators_, 0.0);
+    // Start pub subs
+    make_pub_subs(publish_rate);
+}
 
-    // initialize robot state tf2 message
-    body_tf_.header.frame_id = "world";
-    body_tf_.child_frame_id = "base_link";
+// TODO: put this code into mujoco_core_interactive.hpp
+void MujocoInteractiveNode::gui_loop()
+{
+    while (mujoco_interactive::gui_is_alive())
+    {
+        mujoco_interactive::render_block();
+    }
+    mujoco_interactive::settings.exitrequest = 1;
+    simulate_thread_->join();
+    mujoco_interactive::free_data();
+}
 
-    // initialize command message
-    latest_msg_.kp = std::vector<double>(n_actuators_, 0.0);
-    latest_msg_.kd = std::vector<double>(n_actuators_, 0.0);
-    latest_msg_.position_target = std::vector<double>(n_actuators_, 0.0);
-    latest_msg_.velocity_target = std::vector<double>(n_actuators_, 0.0);
-    latest_msg_.feedforward_torque = std::vector<double>(n_actuators_, 0.0);
-
+void MujocoInteractiveNode::make_pub_subs(const float publish_rate)
+{
     clock_publisher_ = this->create_publisher<rosgraph_msgs::msg::Clock>("/clock", 1);
-
     publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", rclcpp::SensorDataQoS());
     joint_state_pub_timer_ = this->create_wall_timer(
         rclcpp::WallRate(publish_rate).period(),
@@ -74,19 +74,47 @@ MujocoInteractiveNode::MujocoInteractiveNode(std::vector<std::string> joint_name
         std::bind(&MujocoInteractiveNode::joint_command_callback, this, _1));
 }
 
+void MujocoInteractiveNode::allocate_messages(const std::vector<std::string> &joint_names, const unsigned int &n_actuators)
+{
+    // initialize torques
+    actuator_torques_ = std::vector<double>(n_actuators, 0.0);
+
+    // initialize joint message
+    joint_state_message_.name = joint_names;
+    joint_state_message_.position = std::vector<double>(n_actuators, 0.0);
+    joint_state_message_.velocity = std::vector<double>(n_actuators, 0.0);
+    joint_state_message_.effort = std::vector<double>(n_actuators, 0.0);
+
+    // initialize robot state tf2 message
+    body_tf_.header.frame_id = "world";
+    body_tf_.child_frame_id = "base_link";
+
+    // initialize command message
+    latest_msg_.kp = std::vector<double>(n_actuators, 0.0);
+    latest_msg_.kd = std::vector<double>(n_actuators, 0.0);
+    latest_msg_.position_target = std::vector<double>(n_actuators, 0.0);
+    latest_msg_.velocity_target = std::vector<double>(n_actuators, 0.0);
+    latest_msg_.feedforward_torque = std::vector<double>(n_actuators, 0.0);
+}
+
+void MujocoInteractiveNode::start_simulation()
+{
+    simulate_thread_ = std::make_unique<std::thread>(mujoco_interactive::simulate);
+}
+
 void MujocoInteractiveNode::joint_state_publish_callback()
 {
-    RCLCPP_INFO(this->get_logger(), "pub joint state @ %f", core_interactive_->sim_time());
+    RCLCPP_INFO(this->get_logger(), "pub joint state @ sim time: %f", mujoco_interactive::sim_time());
 
     joint_state_message_.header.stamp = this->get_clock()->now();
-    joint_state_message_.position = core_interactive_->actuator_positions(); // slower than mem copy?
-    joint_state_message_.velocity = core_interactive_->actuator_velocities();
-    joint_state_message_.effort = core_interactive_->actuator_efforts();
+    joint_state_message_.position = mujoco_interactive::actuator_positions(); // slower than mem copy?
+    joint_state_message_.velocity = mujoco_interactive::actuator_velocities();
+    joint_state_message_.effort = mujoco_interactive::actuator_efforts();
     publisher_->publish(joint_state_message_);
 
     body_tf_.header.stamp = this->get_clock()->now();
-    auto body_pos = core_interactive_->base_position();
-    auto body_quat = core_interactive_->base_orientation();
+    auto body_pos = mujoco_interactive::base_position();
+    auto body_quat = mujoco_interactive::base_orientation();
     body_tf_.transform.translation.x = body_pos.at(0);
     body_tf_.transform.translation.y = body_pos.at(1);
     body_tf_.transform.translation.z = body_pos.at(2);
@@ -99,7 +127,7 @@ void MujocoInteractiveNode::joint_state_publish_callback()
 
 void MujocoInteractiveNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)
 {
-    RCLCPP_INFO(this->get_logger(), "recv joint command @ sim time %f", core_interactive_->sim_time());
+    RCLCPP_INFO(this->get_logger(), "recv joint command @ sim time %f", mujoco_interactive::sim_time());
     latest_msg_ = msg;
     // std::cout << "pos target: " << msg.position_target << std::endl;
 }

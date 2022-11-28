@@ -1,8 +1,7 @@
 #include "mujoco_core_interactive.hpp"
 
-
 #include <rclcpp/rclcpp.hpp>
-#include "mujoco_node.hpp"
+#include "mujoco_interactive_node.hpp"
 #include "actuator_model.hpp"
 #include <memory>
 
@@ -62,22 +61,21 @@ int main(int argc, char *argv[])
         joint_names.push_back(joint_names_[i]);
     }
 
-    rclcpp::spin(std::make_shared<MujocoInteractiveNode>(
-        joint_names,
-        actuator_models));
+    std::shared_ptr<MujocoInteractiveNode> node_ptr;
+    node_ptr = std::make_shared<MujocoInteractiveNode>(joint_names,
+                                                       actuator_models);
+    node_ptr->start_simulation();
 
-    // Option 5: joint commands not read fast enough?
-    // MujocoNode node(model_xml,
-    //                 floating_base,
-    //                 timestep,
-    //                 joint_names,
-    //                 actuator_model,
-    //                 publish_rate);
-    // node.step_and_render_loop_spinsome();
+    // Start spinning node callbacks
+    std::thread spin_thread([node_ptr]()
+                            { rclcpp::spin(node_ptr); });
+
+    // Begin GUI
+    node_ptr->gui_loop();
+
     rclcpp::shutdown();
     return 0;
 }
-
 
 // // // run event loop
 // int main(int argc, const char **argv)
