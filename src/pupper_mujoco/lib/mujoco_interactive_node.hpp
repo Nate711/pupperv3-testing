@@ -23,13 +23,14 @@ public:
                           std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models);
     void start_simulation();
     void gui_loop();
+
 private:
     void make_pub_subs(const float publish_rate);
     void allocate_messages(const std::vector<std::string> &joint_names, const unsigned int &n_actuators);
     void joint_state_publish_callback();
     void joint_command_callback(const pupper_interfaces::msg::JointCommand &msg);
 
-    // Mujoco sim
+    // Mujoco physics calculation thread
     std::unique_ptr<std::thread> simulate_thread_;
 
     // Actuator models
@@ -53,16 +54,6 @@ private:
     // Subscriber
     rclcpp::Subscription<pupper_interfaces::msg::JointCommand>::SharedPtr subscription_;
     pupper_interfaces::msg::JointCommand latest_msg_;
-
-    // Step rate tracker
-    bool pub_step_rate_;
-    rclcpp::Publisher<builtin_interfaces::msg::Duration>::SharedPtr sim_rate_tracker_;
-    std::chrono::time_point<std::chrono::high_resolution_clock> last_sim_step_;
-
-    int n_actuators_;
-    std::mutex core_lock_;
-    std::mutex msg_lock_;
-    std::atomic<bool> stop_ = false;
 };
 
 #endif

@@ -2281,41 +2281,48 @@ namespace mujoco_interactive
 #endif
   }
 
-  static bool floating_base()
+  static void check_model(mjModel *m)
   {
-    if (m)
+    if (!m)
     {
-      return m->nq != m->nu;
-    }
-    else
-    {
-      throw std::runtime_error("floating_base: Model does not exist");
+      throw std::runtime_error("Model does not exist");
     }
   }
 
-  // TODO: put in another layer above?
+  static void check_data(mjData *m)
+  {
+    if (!d)
+    {
+      throw std::runtime_error("Data does not exist");
+    }
+  }
+
+  /*
+  Args:
+    dt: timestep in seconds
+  */
+  static void set_timestep(float dt)
+  {
+    check_model(m);
+    m->opt.timestep = dt;
+  }
+
+  static bool floating_base()
+  {
+    check_model(m);
+    return m->nq != m->nu;
+  }
+
   static int n_actuators()
   {
-    if (m)
-    {
-      return m->nu;
-    }
-    else
-    {
-      throw std::runtime_error("n_actuators: Model does not exist");
-    }
+    check_model(m);
+    return m->nu;
   }
 
   static float sim_time()
   {
-    if (d)
-    {
-      return d->time;
-    }
-    else
-    {
-      throw std::runtime_error("sim_time: Model data does not exist.");
-    }
+    check_data(d);
+    return d->time;
   }
 
   static std::vector<double> actuator_positions()
@@ -2332,6 +2339,7 @@ namespace mujoco_interactive
     return std::vector<double>(d->qvel + start_idx, d->qvel + start_idx + n_actuators());
   }
 
+  /* Actual actuator efforts */
   static std::vector<double> actuator_efforts()
   {
     std::unique_lock<std::mutex> lock(mtx);

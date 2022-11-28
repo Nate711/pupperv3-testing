@@ -22,7 +22,7 @@ MujocoInteractiveNode::MujocoInteractiveNode(std::vector<std::string> joint_name
     std::string default_urdf = share_dir + "/src/urdf/pupper_v3_fixed_base.xml";
 
     this->declare_parameter<std::string>("model_xml", default_urdf);
-    this->declare_parameter<float>("timestep", 0.004); // TODO: currently unused
+    this->declare_parameter<float>("timestep", 0.001);
     this->declare_parameter<float>("publish_rate", 500.0);
 
     std::string model_xml = this->get_parameter("model_xml").as_string();
@@ -34,12 +34,13 @@ MujocoInteractiveNode::MujocoInteractiveNode(std::vector<std::string> joint_name
     mju::strcpy_arr(mujoco_interactive::filename, model_xml.c_str());
     mujoco_interactive::settings.loadrequest = 1;
     mujoco_interactive::loadmodel();
+    mujoco_interactive::set_timestep(timestep);
 
-    n_actuators_ = mujoco_interactive::n_actuators();
-    RCLCPP_INFO(this->get_logger(), "n_actuators = %d", n_actuators_);
+    auto n_actuators = mujoco_interactive::n_actuators();
+    RCLCPP_INFO(this->get_logger(), "n_actuators = %d", n_actuators);
 
     // Prepare node data
-    allocate_messages(joint_names, n_actuators_);
+    allocate_messages(joint_names, n_actuators);
 
     // Start pub subs
     make_pub_subs(publish_rate);
@@ -97,6 +98,7 @@ void MujocoInteractiveNode::allocate_messages(const std::vector<std::string> &jo
     latest_msg_.feedforward_torque = std::vector<double>(n_actuators, 0.0);
 }
 
+/* TODO: put inside mujoco_interactive */
 void MujocoInteractiveNode::start_simulation()
 {
     simulate_thread_ = std::make_unique<std::thread>(mujoco_interactive::simulate);
@@ -129,5 +131,4 @@ void MujocoInteractiveNode::joint_command_callback(const pupper_interfaces::msg:
 {
     RCLCPP_INFO(this->get_logger(), "recv joint command @ sim time %f", mujoco_interactive::sim_time());
     latest_msg_ = msg;
-    // std::cout << "pos target: " << msg.position_target << std::endl;
 }
