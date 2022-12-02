@@ -35,20 +35,20 @@ target_link_libraries(simulate mujoco::mujoco glfw)
 add_executable(basic src/basic.cc)
 target_link_libraries(basic mujoco::mujoco glfw)
 
-add_library(mujoco_core lib/mujoco_core.cpp)
-target_link_libraries(mujoco_core mujoco::mujoco glfw)
+# add_library(mujoco_core lib/mujoco_core.cpp)
+# target_link_libraries(mujoco_core mujoco::mujoco glfw)
 
-add_library(mujoco_node lib/mujoco_node.cpp)
-target_link_libraries(mujoco_node mujoco_core)
-ament_target_dependencies(
-  mujoco_node
-  rclcpp
-  std_msgs
-  sensor_msgs
-  pupper_interfaces
-  tf2
-  tf2_ros
-  builtin_interfaces)
+# add_library(mujoco_node lib/mujoco_node.cpp)
+# target_link_libraries(mujoco_node mujoco_core)
+# ament_target_dependencies(
+#   mujoco_node
+#   rclcpp
+#   std_msgs
+#   sensor_msgs
+#   pupper_interfaces
+#   tf2
+#   tf2_ros
+#   builtin_interfaces)
 
 add_library(mujoco_interactive_node lib/mujoco_interactive_node.cpp)
 target_link_libraries(mujoco_interactive_node mujoco::mujoco glfw)
@@ -63,19 +63,19 @@ ament_target_dependencies(
   builtin_interfaces
 )
 
-add_executable(mujoco_core_test src/mujoco_core_test.cpp)
-target_link_libraries(mujoco_core_test mujoco_core)
+# add_executable(mujoco_core_test src/mujoco_core_test.cpp)
+# target_link_libraries(mujoco_core_test mujoco_core)
 
-add_executable(mujoco_node_test src/mujoco_node_test.cpp)
-target_link_libraries(mujoco_node_test mujoco_node)
+# add_executable(mujoco_node_test src/mujoco_node_test.cpp)
+# target_link_libraries(mujoco_node_test mujoco_node)
 
 add_executable(mujoco_interactive_test src/mujoco_interactive_test.cpp src/uitools.c)
 target_link_libraries(mujoco_interactive_test mujoco_interactive_node)
 
 install(TARGETS basic DESTINATION lib/${PROJECT_NAME})
 install(TARGETS simulate DESTINATION lib/${PROJECT_NAME})
-install(TARGETS mujoco_core_test DESTINATION lib/${PROJECT_NAME})
-install(TARGETS mujoco_node_test DESTINATION lib/${PROJECT_NAME})
+# install(TARGETS mujoco_core_test DESTINATION lib/${PROJECT_NAME})
+# install(TARGETS mujoco_node_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS mujoco_interactive_test DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY test/launch DESTINATION share/${PROJECT_NAME}/)

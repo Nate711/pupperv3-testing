@@ -7,11 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-    /*
-     * spin is a single-threaded executor
-     * one callback for publishing at 500hz?
-     * one callback for subscribing to control messages
-     */
     rclcpp::init(argc, argv);
 
     for (int i = 0; i < argc; i++)
@@ -19,20 +14,10 @@ int main(int argc, char *argv[])
         std::cout << argv[i] << " ";
     }
 
-    // const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_fixed_base.xml";
-    // bool floating_base = false;
-
-    // const char *model_xml = "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_floating_base.xml";
-    // bool floating_base = true;
-
-    // float timestep = 0.004;
-    // float publish_rate = 100.0;
-    // float sim_step_rate = 250.0; // 1000 seems to make legs move after a delay
-
     // Construct actuator models
     ActuatorParams params(
-        /*kp=*/2.0,
-        /*kd=*/0.5,
+        /*kp=*/0.0, // value used before command recvd. 7.5 is good for trotting
+        /*kd=*/0.0, // value used before command recvd. 0.5 is good for trotting
         /*bus_voltage =*/30.0,
         /*kt=*/0.1,
         /*phase_resistance=*/0.7,
@@ -76,68 +61,3 @@ int main(int argc, char *argv[])
     rclcpp::shutdown();
     return 0;
 }
-
-// // // run event loop
-// int main(int argc, const char **argv)
-// {
-//     // initialize everything
-//     init();
-
-//     // request loadmodel if file given (otherwise drag-and-drop)
-//     if (argc > 1)
-//     {
-//         mju::strcpy_arr(filename, argv[1]);
-//         settings.loadrequest = 2;
-//     }
-
-//     // start simulation thread
-//     std::thread simthread(simulate);
-
-//     // event loop
-//     while (!glfwWindowShouldClose(window) && !settings.exitrequest)
-//     {
-//         // start exclusive access (block simulation thread)
-//         mtx.lock();
-
-//         // load model (not on first pass, to show "loading" label)
-//         if (settings.loadrequest == 1)
-//         {
-//             loadmodel();
-//         }
-//         else if (settings.loadrequest > 1)
-//         {
-//             settings.loadrequest = 1;
-//         }
-
-//         // handle events (calls all callbacks)
-//         glfwPollEvents();
-
-//         // prepare to render
-//         prepare();
-
-//         // end exclusive access (allow simulation thread to run)
-//         mtx.unlock();
-
-//         // render while simulation is running
-//         render(window);
-//     }
-
-//     // stop simulation thread
-//     settings.exitrequest = 1;
-//     simthread.join();
-
-//     // delete everything we allocated
-//     uiClearCallback(window);
-//     free(ctrlnoise);
-//     mj_deleteData(d);
-//     mj_deleteModel(m);
-//     mjv_freeScene(&scn);
-//     mjr_freeContext(&con);
-
-//     // terminate GLFW (crashes with Linux NVidia drivers)
-// #if defined(__APPLE__) || defined(_WIN32)
-//     glfwTerminate();
-// #endif
-
-//     return 0;
-// }

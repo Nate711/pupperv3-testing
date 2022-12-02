@@ -22,9 +22,12 @@
 #include <string>
 #include <thread>
 #include <iostream>
+#include <memory>
 
 #include <mujoco/mjxmacro.h>
 #include "uitools.h"
+
+#include "actuator_model_interface.hpp"
 
 #include "array_safety.h"
 namespace mju = ::mujoco::sample_util;
@@ -69,6 +72,9 @@ namespace mujoco_interactive
   static GLFWwindow *window = NULL;
   static mjuiState uistate;
   static mjUI ui0, ui1;
+
+  // sim thread synchronization
+  static std::mutex mtx;
 
   // UI settings not contained in MuJoCo structures
   static struct
@@ -234,6 +240,24 @@ namespace mujoco_interactive
   // info strings
   static char info_title[kBufSize];
   static char info_content[kBufSize];
+
+  struct ActuatorCommand
+  {
+    std::vector<double> kp;
+    std::vector<double> kd;
+    std::vector<double> position_target;
+    std::vector<double> velocity_target;
+    std::vector<double> feedforward_torque;
+  };
+
+  typedef std::vector<std::shared_ptr<ActuatorModelInterface>> ActuatorModelVector;
+  static ActuatorModelVector actuator_models_;
+
+  static ActuatorCommand latest_command_;
+
+  static const unsigned int kOrientationVars = 4;
+  static const unsigned int kPositionVars = 3;
+  static const unsigned int kBaseVelocityVars = 6;
 
   //-------------------------------- profiler, sensor, info, watch -----------------------------------
 
@@ -1869,9 +1893,6 @@ namespace mujoco_interactive
 
   //---------------------------------- rendering and simulation --------------------------------------
 
-  // sim thread synchronization
-  static std::mutex mtx;
-
   // prepare to render
   static void prepare(void)
   {
@@ -2049,6 +2070,8 @@ namespace mujoco_interactive
     glfwSwapBuffers(window);
   }
 
+  static void update_ctrl_();
+
   // simulate in background thread (while rendering in main thread)
   static void simulate(void)
   {
@@ -2114,6 +2137,7 @@ namespace mujoco_interactive
             mjv_applyPerturbForce(m, d, &pert);
 
             // run single step, let next iteration deal with timing
+            update_ctrl_();
             mj_step(m, d);
           }
 
@@ -2131,6 +2155,7 @@ namespace mujoco_interactive
 
               // run mj_step
               mjtNum prevtm = d->time * settings.slow_down;
+              update_ctrl_();
               mj_step(m, d);
 
               // break on reset
@@ -2250,10 +2275,6 @@ namespace mujoco_interactive
 
   /* -------------------- BEGIN INTERACE ---------------------- */
 
-  static const unsigned int kOrientationVars = 4;
-  static const unsigned int kPositionVars = 3;
-  static const unsigned int kBaseVelocityVars = 3;
-
   static bool gui_is_alive()
   {
     return !glfwWindowShouldClose(mujoco_interactive::window) && !mujoco_interactive::settings.exitrequest;
@@ -2325,6 +2346,59 @@ namespace mujoco_interactive
     return d->time;
   }
 
+  static double actuator_velocity_(int i)
+  {
+    int start_idx = floating_base() ? kBaseVelocityVars : 0;
+    return d->qvel[i + start_idx];
+  }
+
+  static double actuator_position_(int i)
+  {
+    int start_idx = floating_base() ? kOrientationVars + kPositionVars : 0;
+    return d->qpos[i + start_idx];
+  }
+
+  /* Set actuator models by copying pointer vector by value
+   */
+  static void set_actuator_models(const ActuatorModelVector &actuator_models)
+  {
+    actuator_models_ = actuator_models;
+  }
+
+  // Requires mtx already locked
+  static void update_ctrl_()
+  {
+    if (latest_command_.kp.size() == 0)
+    {
+      std::cout << "WARNING: update_ctrl called with no command recorded" << std::endl;
+      return;
+    }
+    if (actuator_models_.size() != m->nu)
+    {
+      throw std::runtime_error("Number of actuator models != number of actuators determined by Mujoco");
+    }
+    for (int i = 0; i < m->nu; i++)
+    {
+      d->ctrl[i] = actuator_models_[i]->run(latest_command_.kp.at(i),
+                                            latest_command_.kd.at(i),
+                                            actuator_position_(i),
+                                            latest_command_.position_target.at(i),
+                                            actuator_velocity_(i),
+                                            latest_command_.velocity_target.at(i),
+                                            latest_command_.feedforward_torque.at(i));
+    }
+  }
+
+  /* set commany by value? */
+  static void set_actuator_command(const ActuatorCommand &command)
+  {
+    if (command.kp.size() != m->nu)
+    {
+      throw std::runtime_error("set command kp size != nu");
+    }
+    latest_command_ = command;
+  }
+
   static std::vector<double> actuator_positions()
   {
     std::unique_lock<std::mutex> lock(mtx);
@@ -2358,6 +2432,7 @@ namespace mujoco_interactive
       return {1.0, 0.0, 0.0, 0.0};
     }
   }
+
   static std::array<double, 3> base_position()
   {
     std::unique_lock<std::mutex> lock(mtx);
@@ -2396,6 +2471,7 @@ namespace mujoco_interactive
       return {0.0, 0.0, 0.0};
     }
   }
+
 };
 
 #endif

@@ -35,12 +35,13 @@ MujocoInteractiveNode::MujocoInteractiveNode(std::vector<std::string> joint_name
     mujoco_interactive::settings.loadrequest = 1;
     mujoco_interactive::loadmodel();
     mujoco_interactive::set_timestep(timestep);
+    mujoco_interactive::set_actuator_models(actuator_models);
 
-    auto n_actuators = mujoco_interactive::n_actuators();
-    RCLCPP_INFO(this->get_logger(), "n_actuators = %d", n_actuators);
+    n_actuators_ = mujoco_interactive::n_actuators();
+    RCLCPP_INFO(this->get_logger(), "n_actuators = %d", n_actuators_);
 
     // Prepare node data
-    allocate_messages(joint_names, n_actuators);
+    allocate_messages(joint_names, n_actuators_);
 
     // Start pub subs
     make_pub_subs(publish_rate);
@@ -127,8 +128,25 @@ void MujocoInteractiveNode::joint_state_publish_callback()
     body_tf_broadcaster_->sendTransform(body_tf_);
 }
 
+bool MujocoInteractiveNode::check_joint_command_is_valid(const pupper_interfaces::msg::JointCommand &msg, int n_actuators)
+{
+    return (msg.kp.size() == n_actuators &&
+            msg.kd.size() == n_actuators &&
+            msg.position_target.size() == n_actuators &&
+            msg.velocity_target.size() == n_actuators &&
+            msg.feedforward_torque.size() == n_actuators);
+}
+
 void MujocoInteractiveNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)
 {
     RCLCPP_INFO(this->get_logger(), "recv joint command @ sim time %f", mujoco_interactive::sim_time());
-    latest_msg_ = msg;
+    check_joint_command_is_valid(msg, n_actuators_);
+    command.kp = msg.kp;
+    command.kd = msg.kd;
+    command.position_target = msg.position_target;
+    command.velocity_target = msg.velocity_target;
+    command.feedforward_torque = msg.feedforward_torque;
+    // TODO: stop copying all the vectors multiple times
+    // 1) from msg to struct. 2) element-wise actuator call
+    mujoco_interactive::set_actuator_command(command);
 }

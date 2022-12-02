@@ -1,22 +1,25 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    return LaunchDescription([
-        Node(
-            package="pupper_mujoco",
-            executable="mujoco_node_test",
-            name="mujoco_node_test",
-            output="screen",
-            emulate_tty=True,
-            parameters=[{
-                "publish_rate": 250.0,
-                "sim_step_rate": 500.0,
-                "sim_render_rate": 30.0,
-                "model_xml":
-                "/home/nathan/pupperv3-testing/src/pupper_mujoco/src/urdf/pupper_v3_fixed_base.xml",
-                "floating_base": False,
-                "timestep": 0.001
-            }])
-    ])
+    share_dir = get_package_share_directory("pupper_mujoco")
+    return LaunchDescription(
+        [
+            Node(
+                package="pupper_mujoco",
+                executable="mujoco_interactive_test",
+                name="mujoco_interactive_test",
+                output="screen",
+                emulate_tty=True,
+                parameters=[
+                    {
+                        "publish_rate": 500.0,
+                        "model_xml": share_dir + "/src/urdf/pupper_v3_fixed_base.xml",
+                        "timestep": 0.001,
+                    }
+                ],
+            )
+        ]
+    )

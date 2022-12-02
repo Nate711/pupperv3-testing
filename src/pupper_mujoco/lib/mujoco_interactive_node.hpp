@@ -29,6 +29,7 @@ private:
     void allocate_messages(const std::vector<std::string> &joint_names, const unsigned int &n_actuators);
     void joint_state_publish_callback();
     void joint_command_callback(const pupper_interfaces::msg::JointCommand &msg);
+    static bool check_joint_command_is_valid(const pupper_interfaces::msg::JointCommand &msg, int n_actuators);
 
     // Mujoco physics calculation thread
     std::unique_ptr<std::thread> simulate_thread_;
@@ -36,6 +37,9 @@ private:
     // Actuator models
     std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models_;
     std::vector<double> actuator_torques_;
+
+    int n_actuators_;
+    mujoco_interactive::ActuatorCommand command;
 
     // Joint State Publisher
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_;
