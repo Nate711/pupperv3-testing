@@ -1,6 +1,11 @@
 build
 install
 log
+.cache
 **/.DS_Store
 .vscode
 **/build_dir
+**/__pycache__
+.vscode
+MUJOCO_LOG.TXT
+src/py_mock_controller/test
