@@ -7,7 +7,7 @@
 #define K_SERVOS_PER_CHANNEL 6
 #define PRINT_CYCLE 1
 
-atomic<bool> quit(false); // signal flag
+std::atomic<bool> quit(false); // signal flag
 
 void sigint_handler(sig_atomic_t s)
 {
@@ -24,7 +24,7 @@ int main()
     motor_interface.initialize_canbuses();
     motor_interface.initialize_motors(); // not needed if you just want angles
     motor_interface.start_read_threads();
-    cout << "Initialized canbuses, motors, threads" << endl;
+    std::cout << "Initialized canbuses, motors, threads" << std::endl;
 
     auto loop_start = time_now();
 
@@ -36,12 +36,12 @@ int main()
         auto loop_now = time_now();
         if (loop_count % PRINT_CYCLE == 0)
         {
-            cout << "\nSince start (us): " << duration_ms(loop_now - loop_start) << "\t";
-            cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
+            std::cout << "\nSince start (us): " << duration_ms(loop_now - loop_start) << "\t";
+            std::cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
         }
         last_loop_ts = loop_now;
 
-        auto motor_data = motor_interface.motor_data_copy(CANChannel::CAN0, 1);
+        auto motor_data = motor_interface.motor_data_safe(CANChannel::CAN0, 1);
 
         motor_interface.request_multi_angle(CANChannel::CAN0, 1); // would overwrite motor_data
         motor_interface.request_multi_angle(CANChannel::CAN0, 2);
@@ -58,12 +58,12 @@ int main()
         if (loop_count % PRINT_CYCLE == 0)
         {
             // cout << motor_data.temp << "\t" << motor_data.current << "\t" << motor_data.velocity << "\t" << motor_data.encoder_counts << "\t" << rotations << "\t" << multi_loop_angle << "\t";
-            cout << motor_data.common.current << "\t" << motor_data.common.velocity_degs << "\t" << motor_data.common.encoder_counts << "\t";
-            cout << motor_data.common.rotations << "\t" << motor_data.common.multi_loop_angle << "\t";
+            std::cout << motor_data.common.current << "\t" << motor_data.common.velocity_degs << "\t" << motor_data.common.encoder_counts << "\t";
+            std::cout << motor_data.common.rotations << "\t" << motor_data.common.multi_loop_angle << "\t";
 
             for (int motor_id = 1; motor_id < K_SERVOS_PER_CHANNEL; motor_id++)
             {
-                cout << motor_interface.motor_data_copy(CANChannel::CAN0, motor_id).multi_loop.multi_loop_angle;
+                std::cout << motor_interface.motor_data_safe(CANChannel::CAN0, motor_id).multi_loop.multi_loop_angle;
             }
         }
         // motor_interface.request_multi_angle(CANChannel::CAN0, 1);

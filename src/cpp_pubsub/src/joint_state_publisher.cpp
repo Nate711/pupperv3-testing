@@ -75,7 +75,7 @@ private:
         motor_interface_->request_multi_angle(CANChannel::CAN0, 5);
         motor_interface_->request_multi_angle(CANChannel::CAN0, 6);
 
-        auto latest_data = motor_interface_->latest_data();
+        auto latest_data = motor_interface_->motor_data_safe();
         // for (int bus = 0; bus < 2; bus++)
         for (int bus = 0; bus < 1; bus++)
         {
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     {
         rate = std::stof(argv[1]);
     }
-    cout << "Rate: " << rate << endl;
+    std::cout << "Rate: " << rate << std::endl;
 
     rclcpp::spin(std::make_shared<PupperJointStatePublisher>(/*rate=*/rate));
     rclcpp::shutdown();

@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     {
         rate = std::stof(argv[1]);
     }
-    cout << "Rate: " << rate << endl;
+    std::cout << "Rate: " << rate << std::endl;
 
     float position_kp = 10000; // 50000 units rotor deg/s per output rad
     uint8_t speed_kp = 5;      // 1 is good default. units A/rotor deg/s

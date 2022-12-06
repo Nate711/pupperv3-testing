@@ -23,17 +23,15 @@
 #include "motor_interface.hpp"
 #include "prof_utils.hpp"
 
-using namespace std;
-
 #define TEMPLATE_HEADER template <int kServosPerChannel>
 #define MOTOR_INTERFACE MotorInterface<kServosPerChannel>
 
 #define DEG_TO_RAD 0.01745329252
 
 TEMPLATE_HEADER
-MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections) : motor_connections_(motor_connections),
-                                                                        initialized_(false),
-                                                                        should_read_(true)
+MOTOR_INTERFACE::MotorInterface(std::vector<CANChannel> motor_connections) : motor_connections_(motor_connections),
+                                                                             initialized_(false),
+                                                                             should_read_(true)
 {
     // DEBUG ONLY
     debug_start_ = time_now();
@@ -43,18 +41,18 @@ MOTOR_INTERFACE::MotorInterface(vector<CANChannel> motor_connections) : motor_co
 TEMPLATE_HEADER
 MOTOR_INTERFACE::~MotorInterface()
 {
-    cout << "Calling motor interface destructor." << endl;
-    cout << "Stopping all motors." << endl;
+    std::cout << "Calling motor interface destructor." << std::endl;
+    std::cout << "Stopping all motors." << std::endl;
     command_all_stop();
-    cout << "Signaled read threads to stop." << endl;
+    std::cout << "Signaled read threads to stop." << std::endl;
     should_read_.store(false);
     // Causes lots of can socket exceptions / errors
-    // for (thread &active_thread : read_threads_)
+    // for (std::thread &active_thread : read_threads_)
     // {
-    //     cout << "Joining thread. ";
+    //     std::cout << "Joining thread. ";
     //     active_thread.join();
     // }
-    cout << "Closing can buses" << endl;
+    std::cout << "Closing can buses" << std::endl;
     close_canbuses();
 }
 
@@ -74,7 +72,7 @@ void MOTOR_INTERFACE::close_canbuses()
     {
         close(canbus_to_fd_.at(static_cast<int>(bus)));
     }
-    cout << "Closed can bus sockets." << endl;
+    std::cout << "Closed can bus sockets." << std::endl;
 }
 
 TEMPLATE_HEADER
@@ -84,8 +82,8 @@ void MOTOR_INTERFACE::initialize_motors()
     {
         for (int motor_id = 1; motor_id <= kServosPerChannel; motor_id++)
         {
-            cout << "Initializing motor id: " << motor_id;
-            cout << " on channel: " << static_cast<int>(bus) << endl;
+            std::cout << "Initializing motor id: " << motor_id;
+            std::cout << " on channel: " << static_cast<int>(bus) << std::endl;
             initialize_motor(bus, motor_id);
         }
     }
@@ -93,10 +91,10 @@ void MOTOR_INTERFACE::initialize_motors()
 }
 
 TEMPLATE_HEADER
-array<array<MotorData, kServosPerChannel>, kNumCANChannels> MOTOR_INTERFACE::latest_data()
+typename MOTOR_INTERFACE::RobotMotorData MOTOR_INTERFACE::motor_data_safe()
 {
     {
-        unique_lock<mutex> lock(latest_data_lock_);
+        std::unique_lock<std::mutex> lock(latest_data_lock_);
         return latest_data_;
     }
 }
@@ -131,7 +129,7 @@ void MOTOR_INTERFACE::command_velocity(CANChannel bus,
     send(bus, motor_id, {kCommandVelocity, 0, 0, 0, LSB, B1, B2, B3});
 }
 
-array<uint8_t, 8> pid_message(uint8_t command, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+std::array<uint8_t, 8> pid_message(uint8_t command, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
 {
     return {command, 0, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki};
 }
@@ -184,7 +182,7 @@ void MOTOR_INTERFACE::request_multi_angle(CANChannel bus, uint8_t motor_id)
     auto start = time_now();
     send(bus, motor_id, {kGetMultiAngle, 0, 0, 0, 0, 0, 0, 0});
     auto stop = time_now();
-    // cout << "Send (ns): " << duration_ns(stop - start) << "\t"; // Send takes roughly 81us
+    // std::cout << "Send (ns): " << duration_ns(stop - start) << "\t"; // Send takes roughly 81us
 }
 
 TEMPLATE_HEADER
@@ -207,7 +205,7 @@ TEMPLATE_HEADER
 void MOTOR_INTERFACE::read_blocking(CANChannel bus)
 {
     struct can_frame frame = read_canframe_blocking(bus);
-    // cout << "CAN id: " << frame.can_id << endl;
+    // std::cout << "CAN id: " << frame.can_id << std::endl;
     parse_frame(bus, frame);
 }
 
@@ -221,29 +219,29 @@ struct can_frame MOTOR_INTERFACE::read_canframe_blocking(CANChannel bus)
     auto start = time_now();
     int fd = canbus_to_fd_.at(static_cast<int>(bus));
     auto stop = time_now();
-    // cout << "FD lookup (ns): " << duration_ns(stop - start) << "\t";
+    // std::cout << "FD lookup (ns): " << duration_ns(stop - start) << "\t";
 
     // Print time to read from can bus
     auto start_read = time_now();
     int nbytes = read(fd, &frame, sizeof(struct can_frame));
     auto stop_read = time_now();
-    // cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
-    // cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
+    // std::cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
+    // std::cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
     if (nbytes < 0)
     {
         // Continue on read timeouts
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
-            cout << "Bus " << static_cast<int>(bus) << " timed out on read" << endl;
+            std::cout << "Bus " << static_cast<int>(bus) << " timed out on read" << std::endl;
         }
-        cerr << "ERROR: can raw socket read\n";
+        std::cerr << "ERROR: can raw socket read\n";
     }
     if (nbytes != sizeof(struct can_frame))
     {
-        cerr << "ERROR: did not read full can frame\n";
+        std::cerr << "ERROR: did not read full can frame\n";
     }
     stop = time_now();
-    // cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
+    // std::cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
     return frame;
 }
 
@@ -254,9 +252,9 @@ MotorData &MOTOR_INTERFACE::motor_data(CANChannel bus, uint8_t motor_id)
 }
 
 TEMPLATE_HEADER
-MotorData MOTOR_INTERFACE::motor_data_copy(CANChannel bus, uint8_t motor_id)
+MotorData MOTOR_INTERFACE::motor_data_safe(CANChannel bus, uint8_t motor_id)
 {
-    unique_lock<mutex> lock(latest_data_lock_);
+    std::unique_lock<std::mutex> lock(latest_data_lock_);
     return latest_data_.at(static_cast<int>(bus)).at(motor_id - 1);
 }
 
@@ -268,7 +266,7 @@ void MOTOR_INTERFACE::multi_angle_update(CANChannel bus,
     memcpy(&multi_loop_angle, frame.data, 8);
     multi_loop_angle = multi_loop_angle >> 8;
     {
-        unique_lock<mutex> lock(latest_data_lock_);
+        std::unique_lock<std::mutex> lock(latest_data_lock_);
         motor_data(bus, motor_id).multi_loop.multi_loop_angle = multi_loop_angle *
                                                                 kDegsPerTick *
                                                                 kSpeedReduction;
@@ -290,7 +288,7 @@ void MOTOR_INTERFACE::torque_velocity_update(CANChannel bus,
 
     // TODO: Implement per-motor mutex
     {
-        unique_lock<mutex> lock(latest_data_lock_);
+        std::unique_lock<std::mutex> lock(latest_data_lock_);
         CommonResponse &common = motor_data(bus, motor_id).common;
         common.temp = temp_raw;
         common.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
@@ -308,7 +306,7 @@ void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame)
     uint8_t motor_id_ = motor_id(frame.can_id);
     if (motor_id_ <= 0 || motor_id_ > kServosPerChannel)
     {
-        cout << "Invalid motor id." << endl;
+        std::cout << "Invalid motor id." << std::endl;
         return;
     }
 
@@ -316,7 +314,7 @@ void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame)
     if (command_id == kGetMultiAngle)
     {
         multi_angle_update(bus, motor_id_, frame);
-        cout << "got multi angle" << endl;
+        std::cout << "got multi angle" << std::endl;
     }
     if (command_id == kCommandCurrent || command_id == kCommandVelocity)
     {
@@ -329,7 +327,7 @@ void MOTOR_INTERFACE::start_read_threads()
 {
     for (auto canbus : motor_connections_)
     {
-        read_threads_.at(static_cast<int>(canbus)) = thread(&MOTOR_INTERFACE::read_thread, this, canbus);
+        read_threads_.at(static_cast<int>(canbus)) = std::thread(&MOTOR_INTERFACE::read_thread, this, canbus);
     }
 }
 
@@ -339,10 +337,10 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     int s;
     struct sockaddr_can addr;
     struct ifreq ifr;
-    cout << "Initializing " << channel_str(bus) << "." << endl;
+    std::cout << "Initializing " << channel_str(bus) << "." << std::endl;
     if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
     {
-        cerr << "socket\n";
+        std::cerr << "socket\n";
     }
 
     // find interface index
@@ -350,17 +348,17 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus)
     ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
     if (!ifr.ifr_ifindex)
     {
-        cerr << "if_nametoindex\n";
+        std::cerr << "if_nametoindex\n";
     }
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
-    cout << "Found: " << channel_str(bus) << " ifindex: " << addr.can_ifindex << endl;
+    std::cout << "Found: " << channel_str(bus) << " ifindex: " << addr.can_ifindex << std::endl;
 
     // bind socket
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        cerr << "bind\n";
+        std::cerr << "bind\n";
     }
     canbus_to_fd_.at(static_cast<int>(bus)) = s;
 
@@ -408,7 +406,7 @@ void MOTOR_INTERFACE::read_thread(CANChannel channel)
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::send(CANChannel bus,
                            uint8_t motor_id,
-                           const array<uint8_t, 8> &payload)
+                           const std::array<uint8_t, 8> &payload)
 {
     // std::cout << "Send can message\n";
     int file_descriptor = canbus_to_fd_.at(static_cast<int>(bus));
@@ -420,12 +418,12 @@ void MOTOR_INTERFACE::send(CANChannel bus,
     auto start = time_now();
     if (write(file_descriptor, &frame, CAN_MTU) != CAN_MTU)
     {
-        cerr << "Error writing frame to " << channel_str(bus) << "\n";
+        std::cerr << "Error writing frame to " << channel_str(bus) << "\n";
     }
     auto stop = time_now();
-    // cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
-    // cout << "Send start (ms): " << duration_ms(start - debug_start_) << "\t";
-    // cout << "Send end (ms): " << duration_ms(stop - debug_start_) << "\t";
+    // std::cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
+    // std::cout << "Send start (ms): " << duration_ms(start - debug_start_) << "\t";
+    // std::cout << "Send end (ms): " << duration_ms(stop - debug_start_) << "\t";
 }
 
 template class MotorInterface<1>;

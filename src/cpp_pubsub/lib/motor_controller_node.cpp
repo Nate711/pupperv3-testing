@@ -113,7 +113,7 @@ void MotorControllerNode::publish_callback()
     motor_controller_.position_control(motor_position_targets);
 
     RCLCPP_INFO(this->get_logger(), "Publishing joint states");
-    auto latest_data = motor_controller_.motor_data_copy();
+    auto latest_data = motor_controller_.motor_data_safe();
     joint_state_message_.header.stamp = now();
 
     for (size_t i = 0; i < joint_state_message_.velocity.size(); i++)

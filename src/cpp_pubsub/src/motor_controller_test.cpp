@@ -8,7 +8,7 @@
 #define K_SERVOS_PER_CHANNEL 6
 #define PRINT_CYCLE 1
 
-atomic<bool> quit(false); // signal flag
+std::atomic<bool> quit(false); // signal flag
 
 void sigint_handler(sig_atomic_t s)
 {
@@ -27,14 +27,14 @@ int main(int argc, char *argv[])
     signal(SIGINT, sigint_handler);
 
     // Create position controller
-    shared_ptr<MotorController<K_SERVOS_PER_CHANNEL>> controller(
+    std::shared_ptr<MotorController<K_SERVOS_PER_CHANNEL>> controller(
         new MotorController<K_SERVOS_PER_CHANNEL>(/*position_kp (dps per output rad)=*/50000.0,
                                                   /*speed_kp=*/4,
                                                   /*max_speed (dps)=*/5000.0,
                                                   /*can channels*/ {CANChannel::CAN0}));
     controller->begin();
-    std::cout << "Initialized controller." << endl;
-    vector<array<float, K_SERVOS_PER_CHANNEL>> goal_positions = {{0}};
+    std::cout << "Initialized controller." << std::endl;
+    std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> goal_positions = {{0}};
 
     // Boiler plate
     auto loop_start = time_now();
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 
         if (loop_count % PRINT_CYCLE == 0)
         {
-            auto common = controller->motor_data_copy(CANChannel::CAN0, 1).common;
+            auto common = controller->motor_data_safe(CANChannel::CAN0, 1).common;
             std::cout << "I(A): " << common.current << "\tTheta: " << common.multi_loop_angle << "\t";
         }
 
