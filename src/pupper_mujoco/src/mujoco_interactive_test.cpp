@@ -5,6 +5,13 @@
 #include "actuator_model.hpp"
 #include <memory>
 
+// TODO:
+/*
+1) Ctrl-c from terminal seems to do nothing
+
+Desired behavior: ctrl-c stops the simulation and calls destructors on simulation variables and on node
+
+*/
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
@@ -53,11 +60,14 @@ int main(int argc, char *argv[])
 
     // Start spinning node callbacks
     std::thread spin_thread([node_ptr]()
-                            { rclcpp::spin(node_ptr); });
+                            { rclcpp::spin(node_ptr); rclcpp::shutdown(); });
+
+    node_ptr->calibrate_motors();
 
     // Begin GUI
-    node_ptr->gui_loop();
+    node_ptr->run_gui_blocking();
 
+    std::cout << "---------CALLING RCLCPP SHUTDOWN----------" << std::endl;
     rclcpp::shutdown();
     return 0;
 }

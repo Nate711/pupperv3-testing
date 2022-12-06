@@ -69,7 +69,6 @@ public:
                num_t velocity_target,   // rad/s
                num_t feedforward_torque // Nm
     )
-
     {
         num_t torque_command = params_.kp * (position_target - position) +
                                params_.kd * (velocity_target - velocity) +

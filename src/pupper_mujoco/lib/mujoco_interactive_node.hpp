@@ -21,8 +21,10 @@ class MujocoInteractiveNode : public rclcpp::Node
 public:
     MujocoInteractiveNode(std::vector<std::string> joint_names,
                           std::vector<std::shared_ptr<ActuatorModelInterface>> actuator_models);
+    ~MujocoInteractiveNode();
     void start_simulation();
-    void gui_loop();
+    void run_gui_blocking();
+    void calibrate_motors();
 
 private:
     void make_pub_subs(const float publish_rate);

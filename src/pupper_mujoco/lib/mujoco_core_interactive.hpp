@@ -23,13 +23,16 @@
 #include <thread>
 #include <iostream>
 #include <memory>
+#include <chrono>
 
 #include <mujoco/mjxmacro.h>
 #include "uitools.h"
+#include "utils.hpp"
 
 #include "actuator_model_interface.hpp"
 
 #include "array_safety.h"
+
 namespace mju = ::mujoco::sample_util;
 
 namespace mujoco_interactive
@@ -241,6 +244,8 @@ namespace mujoco_interactive
   static char info_title[kBufSize];
   static char info_content[kBufSize];
 
+  /****************** INTERFACE VARS *********************/
+
   struct ActuatorCommand
   {
     std::vector<double> kp;
@@ -253,11 +258,17 @@ namespace mujoco_interactive
   typedef std::vector<std::shared_ptr<ActuatorModelInterface>> ActuatorModelVector;
   static ActuatorModelVector actuator_models_;
 
+  static std::mutex latest_command_lock_;
   static ActuatorCommand latest_command_;
+
+  static bool is_robot_calibrated_ = false;
 
   static const unsigned int kOrientationVars = 4;
   static const unsigned int kPositionVars = 3;
   static const unsigned int kBaseVelocityVars = 6;
+
+  static std::shared_ptr<std::thread> simulate_thread_;
+  static std::shared_ptr<std::thread> calibrate_thread_;
 
   //-------------------------------- profiler, sensor, info, watch -----------------------------------
 
@@ -2082,6 +2093,7 @@ namespace mujoco_interactive
     // run until asked to exit
     while (!settings.exitrequest)
     {
+      // std::cout << "exitrequest: " << settings.exitrequest << std::endl;
       // sleep for 1 ms or yield, to let main thread run
       //  yield results in busy wait - which has better timing but kills battery life
       if (settings.run && settings.busywait)
@@ -2302,6 +2314,33 @@ namespace mujoco_interactive
 #endif
   }
 
+  static void start_simulation()
+  {
+    simulate_thread_ = std::make_shared<std::thread>(simulate);
+  }
+
+  static void join_simulation()
+  {
+    simulate_thread_->join();
+  }
+
+  // TODO: put everything in a class
+  static void run_gui_blocking()
+  {
+    DoStuffOnDestruction destructor([&]()
+                                    {
+      settings.exitrequest = 1;
+      join_simulation();
+      free_data();
+      std::cout << "---------------- SIM LAMBDA DESTRUCTOR CALLED -----------" << std::endl; });
+
+    while (gui_is_alive())
+    {
+      render_block();
+    }
+  }
+
+  // TODO: bad pointer is passed by value?
   static void check_model(mjModel *m)
   {
     if (!m)
@@ -2310,7 +2349,7 @@ namespace mujoco_interactive
     }
   }
 
-  static void check_data(mjData *m)
+  static void check_data(mjData *d)
   {
     if (!d)
     {
@@ -2358,19 +2397,22 @@ namespace mujoco_interactive
     return d->qpos[i + start_idx];
   }
 
-  /* Set actuator models by copying pointer vector by value
+  /* Sets actuator models by copying pointer vector by value
+
+  TODO: determine if this is ok?
    */
   static void set_actuator_models(const ActuatorModelVector &actuator_models)
   {
     actuator_models_ = actuator_models;
   }
 
-  // Requires mtx already locked
+  // Requires mtx (mutex for mujoco stuff) already locked
   static void update_ctrl_()
   {
+    std::unique_lock<std::mutex> lock(latest_command_lock_);
     if (latest_command_.kp.size() == 0)
     {
-      std::cout << "WARNING: update_ctrl called with no command recorded" << std::endl;
+      // std::cout << "WARNING: update_ctrl called with no command recorded" << std::endl;
       return;
     }
     if (actuator_models_.size() != m->nu)
@@ -2394,8 +2436,9 @@ namespace mujoco_interactive
   {
     if (command.kp.size() != m->nu)
     {
-      throw std::runtime_error("set command kp size != nu");
+      throw std::runtime_error("set_actuator_command: kp.size() != nu");
     }
+    std::unique_lock<std::mutex> lock(latest_command_lock_);
     latest_command_ = command;
   }
 
@@ -2470,6 +2513,80 @@ namespace mujoco_interactive
     {
       return {0.0, 0.0, 0.0};
     }
+  }
+
+  static ActuatorCommand zero_command(const int &nu)
+  {
+    ActuatorCommand command;
+    command.kp = std::vector<double>(nu, 0.0);
+    command.kd = std::vector<double>(nu, 0.0);
+    command.position_target = std::vector<double>(nu, 0.0);
+    command.velocity_target = std::vector<double>(nu, 0.0);
+    command.feedforward_torque = std::vector<double>(nu, 0.0);
+    return command;
+  }
+
+  // TODO: ONCE IN A WHILE THROWS OUT OF BOUNDS
+  static void calibrate_motors_thread()
+  {
+    std::cout << "------------ BEGINNING CALIBRATION ----------" << std::endl;
+    using namespace std::chrono_literals;
+
+    // TODO: MAKE PARAMETERS
+    float kd = 3.0;
+    float velocity_target = 0.5;
+    std::vector<int> cal_directions = {-1, 1, 1,
+                                       1, -1, -1,
+                                       -1, 1, 1,
+                                       1, -1, -1};
+    float speed_threshold = 0.01;
+    int calibration_threshold = 20;
+    std::chrono::duration sleep_time = 1000us;
+
+    is_robot_calibrated_ = false;
+
+    std::vector<int> loops_at_endstop = std::vector<int>(m->nu, 0);
+    ActuatorCommand command = zero_command(m->nu);
+    std::fill(command.kp.begin(), command.kp.end(), 0.0);
+    std::fill(command.kd.begin(), command.kd.end(), kd);
+    for (size_t i = 0; i < command.velocity_target.size(); i++)
+    {
+      command.velocity_target.at(i) = cal_directions.at(i) * velocity_target;
+    }
+    auto uncalibrated = [calibration_threshold](int i)
+    { return i < calibration_threshold; };
+
+    while (std::any_of(loops_at_endstop.begin(), loops_at_endstop.end(), uncalibrated))
+    {
+      auto vels = actuator_velocities();
+      for (int motor_idx = 0; motor_idx < m->nu; motor_idx++)
+      {
+        if (abs(vels.at(motor_idx)) < speed_threshold)
+        {
+          loops_at_endstop.at(motor_idx) += 1;
+          // std::cout << "idx: " << motor_idx << " loops_at_endstop: " << loops_at_endstop.at(motor_idx) << std::endl;
+        }
+        if (loops_at_endstop.at(motor_idx) > calibration_threshold)
+        {
+          command.velocity_target.at(motor_idx) = 0.0;
+        }
+      }
+      set_actuator_command(command);
+      std::this_thread::sleep_for(sleep_time);
+    }
+    is_robot_calibrated_ = true;
+    std::cout << "------------ FINISHED CALIBRATION ----------" << std::endl;
+  }
+
+  static bool is_robot_calibrated()
+  {
+    return is_robot_calibrated_;
+  }
+
+  static void calibrate_motors()
+  {
+    // start thread
+    calibrate_thread_ = std::make_shared<std::thread>(calibrate_motors_thread);
   }
 
 };

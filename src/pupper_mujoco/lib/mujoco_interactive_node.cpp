@@ -47,16 +47,24 @@ MujocoInteractiveNode::MujocoInteractiveNode(std::vector<std::string> joint_name
     make_pub_subs(publish_rate);
 }
 
-// TODO: put this code into mujoco_core_interactive.hpp
-void MujocoInteractiveNode::gui_loop()
+MujocoInteractiveNode::~MujocoInteractiveNode()
 {
-    while (mujoco_interactive::gui_is_alive())
-    {
-        mujoco_interactive::render_block();
-    }
-    mujoco_interactive::settings.exitrequest = 1;
-    simulate_thread_->join();
-    mujoco_interactive::free_data();
+    std::cout << "----------- DESTROYING INTERACTIVE NODE -----------" << std::endl;
+}
+
+void MujocoInteractiveNode::run_gui_blocking()
+{
+    mujoco_interactive::run_gui_blocking();
+}
+
+void MujocoInteractiveNode::start_simulation()
+{
+    mujoco_interactive::start_simulation();
+}
+
+void MujocoInteractiveNode::calibrate_motors()
+{
+    mujoco_interactive::calibrate_motors();
 }
 
 void MujocoInteractiveNode::make_pub_subs(const float publish_rate)
@@ -99,15 +107,9 @@ void MujocoInteractiveNode::allocate_messages(const std::vector<std::string> &jo
     latest_msg_.feedforward_torque = std::vector<double>(n_actuators, 0.0);
 }
 
-/* TODO: put inside mujoco_interactive */
-void MujocoInteractiveNode::start_simulation()
-{
-    simulate_thread_ = std::make_unique<std::thread>(mujoco_interactive::simulate);
-}
-
 void MujocoInteractiveNode::joint_state_publish_callback()
 {
-    RCLCPP_INFO(this->get_logger(), "pub joint state @ sim time: %f", mujoco_interactive::sim_time());
+    // RCLCPP_INFO(this->get_logger(), "pub joint state @ sim time: %f", mujoco_interactive::sim_time());
 
     joint_state_message_.header.stamp = this->get_clock()->now();
     joint_state_message_.position = mujoco_interactive::actuator_positions(); // slower than mem copy?
@@ -139,14 +141,21 @@ bool MujocoInteractiveNode::check_joint_command_is_valid(const pupper_interfaces
 
 void MujocoInteractiveNode::joint_command_callback(const pupper_interfaces::msg::JointCommand &msg)
 {
-    RCLCPP_INFO(this->get_logger(), "recv joint command @ sim time %f", mujoco_interactive::sim_time());
+    RCLCPP_INFO(this->get_logger(), "recvd joint command @ sim time %f", mujoco_interactive::sim_time());
     check_joint_command_is_valid(msg, n_actuators_);
-    command.kp = msg.kp;
-    command.kd = msg.kd;
-    command.position_target = msg.position_target;
-    command.velocity_target = msg.velocity_target;
-    command.feedforward_torque = msg.feedforward_torque;
-    // TODO: stop copying all the vectors multiple times
-    // 1) from msg to struct. 2) element-wise actuator call
-    mujoco_interactive::set_actuator_command(command);
+    if (!mujoco_interactive::is_robot_calibrated())
+    {
+        RCLCPP_WARN(this->get_logger(), "ignoring joint command bc robot is not calibrated");
+    }
+    else
+    {
+        command.kp = msg.kp;
+        command.kd = msg.kd;
+        command.position_target = msg.position_target;
+        command.velocity_target = msg.velocity_target;
+        command.feedforward_torque = msg.feedforward_torque;
+        // TODO: stop copying all the vectors multiple times
+        // 1) from msg to struct. 2) element-wise actuator call
+        mujoco_interactive::set_actuator_command(command);
+    }
 }
