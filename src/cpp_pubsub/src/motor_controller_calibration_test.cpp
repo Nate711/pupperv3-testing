@@ -32,26 +32,17 @@ int main(int argc, char *argv[])
     std::cout << "Initialized controller." << std::endl;
     std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> goal_positions = {{0}};
 
-    std::cout << "Starting calibration thread" << std::endl;
-    controller.start_calibration();
+    std::cout << "Starting calibration..." << std::endl;
+    controller.calibrate_motors(quit);
 
-    // Boiler plate
-    auto loop_start = time_now();
-    int loop_count = 0;
-    auto last_loop_ts = time_now();
-    while (!quit.load())
-    {
-        auto loop_now = time_now();
-        if (loop_count % PRINT_CYCLE == 0)
-        {
-            std::cout << "Since start (us): " << duration_ms(loop_now - loop_start) << "\t";
-            std::cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
-            std::cout << std::endl;
-        }
-        last_loop_ts = loop_now;
-
-        std::this_thread::sleep_for(2000us);
-        loop_count++;
-    }
+    std::cout << "blocking move" << std::endl;
+    MotorController<K_SERVOS_PER_CHANNEL>::ActuatorCommand command = {{0, 0, 0, 0, 0, 0}};
+    controller.blocking_move(quit,
+                             /*max_speed(rotor deg/s)=*/1000.0,
+                             /*speed_kp=*/10.0,
+                             command,
+                             /*speed_tolerance(output rad/s)=*/0.01,
+                             /*wait_ticks=*/100);
+    std::cout << "finished blocking move" << std::endl;
     return 0;
 }

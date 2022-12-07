@@ -397,12 +397,12 @@ void MOTOR_INTERFACE::read_thread(CANChannel channel)
 {
     while (should_read_.load())
     {
-        // block until multi angle can message is read
-        // MotorData motor_data = read_multi_angle(channel);
         read_blocking(channel);
     }
 }
 
+/* Only non-thread-safe part of this function is reading canbus_to_fd_.
+ * However, it's array of int so probably ok */
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::send(CANChannel bus,
                            uint8_t motor_id,
