@@ -1,5 +1,10 @@
 #pragma once
 
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -7,13 +12,8 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <signal.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 #include <net/if.h>
@@ -25,52 +25,47 @@
 
 static const int kNumCANChannels = 4;
 
-enum class CANChannel
-{
+enum class CANChannel {
   CAN0 = 0,
   CAN1 = 1,
   CAN2 = 2,
   CAN3 = 3,
 };
 
-const std::vector<CANChannel> kAllCANChannels = {
-    CANChannel::CAN0, CANChannel::CAN1, CANChannel::CAN2, CANChannel::CAN3};
+const std::vector<CANChannel> kAllCANChannels = {CANChannel::CAN0, CANChannel::CAN1,
+                                                 CANChannel::CAN2, CANChannel::CAN3};
 
-struct CommonResponse
-{
-  int16_t encoder_counts = 0;          // counts (-2^15-1 to 2^15)
-  int16_t previous_encoder_counts = 0; // previous counts
-  float velocity_degs = 0.0;           // degs per sec
-  float velocity_rads = 0.0;           // rads per sec
-  float current = 0.0;                 // Amps
-  uint8_t temp = 0;                    // C
+struct CommonResponse {
+  int16_t encoder_counts = 0;           // counts (-2^15-1 to 2^15)
+  int16_t previous_encoder_counts = 0;  // previous counts
+  float velocity_degs = 0.0;            // degs per sec
+  float velocity_rads = 0.0;            // rads per sec
+  float current = 0.0;                  // Amps
+  uint8_t temp = 0;                     // C
 
-  int32_t rotations = 0;           // motor rotations (post-processed)
-  float multi_loop_angle = 0.0;    // degs (post-processed)
-  float output_rads = 0.0;         // rads (post-processed)
-  float output_rads_per_sec = 0.0; // rads per sec
+  int32_t rotations = 0;            // motor rotations (post-processed)
+  float multi_loop_angle = 0.0;     // degs (post-processed)
+  float output_rads = 0.0;          // rads (post-processed)
+  float output_rads_per_sec = 0.0;  // rads per sec
 };
 
-struct MultiLoopAngleResponse
-{
-  float multi_loop_angle = 0.0; // degs
+struct MultiLoopAngleResponse {
+  float multi_loop_angle = 0.0;  // degs
 };
 
-struct MotorData
-{
+struct MotorData {
   uint8_t error = 0;
   uint8_t motor_id = 0;
   MultiLoopAngleResponse multi_loop;
   CommonResponse common;
 };
 
-template <int kServosPerChannel>
-class MotorInterface
-{
-public:
-  using RobotMotorData = std::array<std::array<MotorData, kServosPerChannel>, kNumCANChannels>;
+template <int ServosPerChannel>
+class MotorInterface {
+ public:
+  using RobotMotorData = std::array<std::array<MotorData, ServosPerChannel>, kNumCANChannels>;
 
-  MotorInterface(std::vector<CANChannel> motor_connections);
+  explicit MotorInterface(std::vector<CANChannel> motor_connections);
   ~MotorInterface();
   void initialize_canbuses();
   void close_canbuses();
@@ -86,21 +81,18 @@ public:
    *   velocity: deg/s
    */
   void command_velocity(CANChannel bus, uint8_t motor_id, float velocity);
-  void write_pid_rom(CANChannel bus, uint8_t motor_id, uint8_t angle_kp,
-                     uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki,
-                     uint8_t iq_kp, uint8_t iq_ki);
-  void write_pid_ram(CANChannel bus, uint8_t motor_id, uint8_t angle_kp,
-                     uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki,
-                     uint8_t iq_kp, uint8_t iq_ki);
-  void write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki,
-                            uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp,
-                            uint8_t iq_ki);
+  void write_pid_rom(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki,
+                     uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
+  void write_pid_ram(CANChannel bus, uint8_t motor_id, uint8_t angle_kp, uint8_t angle_ki,
+                     uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
+  void write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki,
+                            uint8_t iq_kp, uint8_t iq_ki);
   void command_stop(CANChannel bus, uint8_t motor_id);
   void command_all_stop();
   void read_blocking(CANChannel bus);
   void start_read_threads();
   RobotMotorData motor_data_safe();
-  
+
   /* Report the latest data from the motor
    * Multi_loop_angle: degs
    * velocity: deg/s
@@ -111,37 +103,32 @@ public:
   static const uint8_t kDefaultIqKp = 0x3C;
   static const uint8_t kDefaultIqKi = 0x28;
 
-private:
+ private:
   void initialize_bus(CANChannel bus);
   void initialize_motor(CANChannel bus, uint8_t motor_id);
   struct can_frame read_canframe_blocking(CANChannel bus);
   uint32_t can_id(uint8_t motor_id);
   uint8_t motor_id(uint32_t can_id);
   void read_thread(CANChannel channel);
-  void send(CANChannel bus, uint8_t motor_id,
-            const std::array<uint8_t, 8> &payload);
+  void send(CANChannel bus, uint8_t motor_id, const std::array<uint8_t, 8> &payload);
   MotorData &motor_data(CANChannel bus, uint8_t motor_id);
   void parse_frame(CANChannel bus, const struct can_frame &frame);
-  void multi_angle_update(CANChannel bus, uint8_t motor_id,
-                          const struct can_frame &frame);
-  void torque_velocity_update(CANChannel bus, uint8_t motor_id,
-                              const struct can_frame &frame);
+  void multi_angle_update(CANChannel bus, uint8_t motor_id, const struct can_frame &frame);
+  void torque_velocity_update(CANChannel bus, uint8_t motor_id, const struct can_frame &frame);
   void update_rotation(CommonResponse &common);
-  std::string channel_str(CANChannel channel)
-  {
-    switch (channel)
-    {
-    case CANChannel::CAN0:
-      return "can0";
-    case CANChannel::CAN1:
-      return "can1";
-    case CANChannel::CAN2:
-      return "can2";
-    case CANChannel::CAN3:
-      return "can3";
-    default:
-      std::cerr << "Invalid can channel" << std::endl;
-      return "";
+  std::string channel_str(CANChannel channel) {
+    switch (channel) {
+      case CANChannel::CAN0:
+        return "can0";
+      case CANChannel::CAN1:
+        return "can1";
+      case CANChannel::CAN2:
+        return "can2";
+      case CANChannel::CAN3:
+        return "can3";
+      default:
+        std::cerr << "Invalid can channel" << std::endl;
+        return "";
     }
   }
   std::array<int, 4> canbus_to_fd_;

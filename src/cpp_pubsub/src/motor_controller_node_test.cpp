@@ -20,21 +20,20 @@
 #include <rclcpp/rclcpp.hpp>
 #include "motor_controller_node.hpp"
 
-int main(int argc, char *argv[])
-{
-    rclcpp::init(argc, argv);
-    float rate = 500;
-    if (argc > 1)
-    {
-        rate = std::stof(argv[1]);
-    }
-    std::cout << "Rate: " << rate << std::endl;
+int main(int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+  float rate = 500;
+  if (argc > 1) {
+    rate = std::stof(argv[1]);
+  }
+  std::cout << "Rate: " << rate << std::endl;
 
-    float position_kp = 10000; // 50000 units rotor deg/s per output rad
-    uint8_t speed_kp = 5;      // 1 is good default. units A/rotor deg/s
-    float max_speed = 5000;    // rotor deg/s
+  float position_kp = 10000;  // 50000 units rotor deg/s per output rad
+  uint8_t speed_kp = 5;       // 1 is good default. units A/rotor deg/s
+  float max_speed = 5000;     // rotor deg/s
 
-    rclcpp::spin(std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed));
-    rclcpp::shutdown();
-    return 0;
+  rclcpp::spin(
+      std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed));
+  rclcpp::shutdown();
+  return 0;
 }
