@@ -16,9 +16,17 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <atomic>
 
 #include <rclcpp/rclcpp.hpp>
 #include "motor_controller_node.hpp"
+
+std::atomic_bool quit(false);
+
+void sigint_handler(sig_atomic_t signal) {
+  quit.store(true);
+  printf("Caught signal %d\n", signal);
+}
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
@@ -28,12 +36,12 @@ int main(int argc, char *argv[]) {
   }
   std::cout << "Rate: " << rate << std::endl;
 
-  float position_kp = 10000;  // 50000 units rotor deg/s per output rad
-  uint8_t speed_kp = 5;       // 1 is good default. units A/rotor deg/s
+  float position_kp = 100;  // 10000 is good default. units rotor deg/s per output rad
+  uint8_t speed_kp = 5;       // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;     // rotor deg/s
 
   rclcpp::spin(
-      std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed));
+      std::make_shared<MotorControllerNode>(/*rate=*/rate, position_kp, speed_kp, max_speed, quit));
   rclcpp::shutdown();
   return 0;
 }

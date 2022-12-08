@@ -25,14 +25,13 @@
 
 #include "motor_controller_node.hpp"
 
+#include <atomic>
+
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-#define M_DEG_TO_RAD 0.01745329252
-#define M_GEAR_RATIO 0.10
-
 MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t speed_kp,
-                                         float max_speed)
+                                         float max_speed, const std::atomic_bool& stop)
     : Node("motor_controller_node"),
       publish_rate_(rate),
       motor_controller_(position_kp, speed_kp, max_speed, kMotorConnections) {
@@ -56,6 +55,12 @@ MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t 
   subscriber_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
       "/joint_commands", rclcpp::SensorDataQoS(),
       std::bind(&MotorControllerNode::joint_command_callback, this, _1));
+
+  motor_controller_.calibrate_motors(stop);
+
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0},
+                                                                          {0, 0, 0, 0, 0, 0}};
+  motor_controller_.blocking_move(stop, 1000.0, 10.0, command);
 }
 
 MotorControllerNode::~MotorControllerNode() {}
@@ -90,26 +95,29 @@ void MotorControllerNode::publish_callback() {
     RCLCPP_WARN(this->get_logger(), "No joint command received. Skipping control");
     return;
   }
-  auto motor_position_targets = split_vector(latest_joint_command_.position_target);
-  RCLCPP_INFO(this->get_logger(), "Commanding %lu motors on %lu buses.",
-              latest_joint_command_.position_target.size(), motor_position_targets.size());
-  // RCLCPP_INFO(this->get_logger(), motor_position_targets);
-  motor_controller_.position_control(motor_position_targets);
 
-  RCLCPP_INFO(this->get_logger(), "Publishing joint states");
-  auto latest_data = motor_controller_.motor_data_safe();
-  joint_state_message_.header.stamp = now();
+  if (motor_controller_.is_calibrated()) {
+    auto motor_position_targets = split_vector(latest_joint_command_.position_target);
+    RCLCPP_INFO(this->get_logger(), "Commanding %lu motors on %lu buses.",
+                latest_joint_command_.position_target.size(), motor_position_targets.size());
+    // RCLCPP_INFO(this->get_logger(), motor_position_targets);
+    motor_controller_.position_control(motor_position_targets);
 
-  for (size_t i = 0; i < joint_state_message_.velocity.size(); i++) {
-    int bus_id = i / K_SERVOS_PER_CHANNEL;
-    int motor_id = i % K_SERVOS_PER_CHANNEL;
-    joint_state_message_.position.at(i) = latest_data.at(bus_id).at(motor_id).common.output_rads;
-    joint_state_message_.velocity.at(i) =
-        latest_data.at(bus_id).at(motor_id).common.velocity_rads * M_GEAR_RATIO;
+    RCLCPP_INFO(this->get_logger(), "Publishing joint states");
+    joint_state_message_.header.stamp = now();
+    auto positions = motor_controller_.actuator_positions();
+    auto velocities = motor_controller_.actuator_velocities();
+    auto efforts = motor_controller_.actuator_efforts();
 
-    // TODO: make Nm
-    joint_state_message_.effort.at(i) = latest_data.at(bus_id).at(motor_id).common.current;
+    for (size_t i = 0; i < joint_state_message_.velocity.size(); i++) {
+      int bus_id = i / K_SERVOS_PER_CHANNEL;
+      int motor_id = i % K_SERVOS_PER_CHANNEL;
+      joint_state_message_.position.at(i) = positions.at(bus_id).at(motor_id);
+      joint_state_message_.velocity.at(i) = velocities.at(bus_id).at(motor_id);
+      // TODO: make Nm
+      joint_state_message_.effort.at(i) = efforts.at(bus_id).at(motor_id);
+    }
+    // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
+    publisher_->publish(joint_state_message_);
   }
-  // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
-  publisher_->publish(joint_state_message_);
 }

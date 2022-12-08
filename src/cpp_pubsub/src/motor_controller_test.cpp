@@ -55,8 +55,9 @@ int main(int argc, char *argv[]) {
     controller->position_control(goal_positions);
 
     if (loop_count % PRINT_CYCLE == 0) {
-      auto common = controller->motor_data_safe(CANChannel::CAN0, 1).common;
-      std::cout << "I(A): " << common.current << "\tTheta: " << common.multi_loop_angle << "\t";
+      auto current = controller->actuator_efforts().at(0).at(0);
+      auto pos = controller->actuator_positions().at(0).at(0);
+      std::cout << "I(A): " << current << "\tOutput rads: " << pos << "\t";
     }
 
     usleep(sleep_us);

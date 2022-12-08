@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
   controller.calibrate_motors(quit);
 
-  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorCommand command = {{0, 0, 0, 0, 0, 0}};
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0}};
   controller.blocking_move(quit,
                            /*max_speed(rotor deg/s)=*/1000.0,
                            /*speed_kp=*/10.0, command,

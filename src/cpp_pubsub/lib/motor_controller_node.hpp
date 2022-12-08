@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 #include <pupper_interfaces/msg/joint_command.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -37,7 +38,7 @@ const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel:
 
 class MotorControllerNode : public rclcpp::Node {
  public:
-  MotorControllerNode(float rate, float position_kp, uint8_t speed_kp, float max_speed);
+  MotorControllerNode(float rate, float position_kp, uint8_t speed_kp, float max_speed, const std::atomic_bool& stop);
   ~MotorControllerNode();
   static std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> split_vector(
       std::vector<double> vector);
