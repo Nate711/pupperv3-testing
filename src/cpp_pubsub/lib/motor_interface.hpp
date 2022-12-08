@@ -108,7 +108,7 @@ class MotorInterface {
   void initialize_motor(CANChannel bus, uint8_t motor_id);
   struct can_frame read_canframe_blocking(CANChannel bus);
   uint32_t can_id(uint8_t motor_id);
-  uint8_t motor_id(uint32_t can_id);
+  uint8_t get_motor_id(uint32_t can_id);
   void read_thread(CANChannel channel);
   void send(CANChannel bus, uint8_t motor_id, const std::array<uint8_t, 8> &payload);
   MotorData &motor_data(CANChannel bus, uint8_t motor_id);

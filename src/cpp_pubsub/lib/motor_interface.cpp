@@ -179,7 +179,6 @@ void MOTOR_INTERFACE::update_rotation(CommonResponse &common) {
                              static_cast<float>(common.encoder_counts) / kEncoderCountsPerRot) *
                             360.0F;
   common.output_rads = common.multi_loop_angle * kSpeedReduction * DEG_TO_RAD;
-  common.output_rads_calibrated = common.output_rads + common.calibration_offset;
 }
 
 TEMPLATE_HEADER
@@ -261,7 +260,7 @@ void MOTOR_INTERFACE::torque_velocity_update(CANChannel bus, uint8_t motor_id,
     std::unique_lock<std::mutex> lock(latest_data_lock_);
     CommonResponse &common = motor_data(bus, motor_id).common;
     common.temp = temp_raw;
-    common.current = (float)current_raw * kCurrentReadMax / kCurrentRawReadMax;
+    common.current = static_cast<float>(current_raw) * kCurrentReadMax / kCurrentRawReadMax;
     common.velocity_degs = speed_raw;
     common.velocity_rads = common.velocity_degs * DEG_TO_RAD;
     common.output_rads_per_sec = common.velocity_rads * kSpeedReduction;
@@ -272,7 +271,7 @@ void MOTOR_INTERFACE::torque_velocity_update(CANChannel bus, uint8_t motor_id,
 
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame) {
-  uint8_t motor_id = motor_id(frame.can_id);
+  uint8_t motor_id = get_motor_id(frame.can_id);
   if (motor_id <= 0 || motor_id > kServosPerChannel) {
     std::cout << "Invalid motor id." << std::endl;
     return;
@@ -318,10 +317,10 @@ void MOTOR_INTERFACE::initialize_bus(CANChannel bus) {
   std::cout << "Found: " << channel_str(bus) << " ifindex: " << addr.can_ifindex << std::endl;
 
   // bind socket
-  if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+  if (bind(socket_id, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
     std::cerr << "bind\n";
   }
-  canbus_to_fd_.at(static_cast<int>(bus)) = s;
+  canbus_to_fd_.at(static_cast<int>(bus)) = socket_id;
 
   // Set timeout
   struct timeval tv;
@@ -344,7 +343,7 @@ TEMPLATE_HEADER
 uint32_t MOTOR_INTERFACE::can_id(uint8_t motor_id) { return 0x140 + motor_id; }
 
 TEMPLATE_HEADER
-uint8_t MOTOR_INTERFACE::motor_id(uint32_t can_id) { return can_id - 0x140; }
+uint8_t MOTOR_INTERFACE::get_motor_id(uint32_t can_id) { return can_id - 0x140; }
 
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::read_thread(CANChannel channel) {
