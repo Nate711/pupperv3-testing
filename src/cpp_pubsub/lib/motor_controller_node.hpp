@@ -38,7 +38,7 @@ const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel:
 
 class MotorControllerNode : public rclcpp::Node {
  public:
-  MotorControllerNode(float rate, float position_kp, uint8_t speed_kp, float max_speed);
+  MotorControllerNode(float rate, MotorController<K_SERVOS_PER_CHANNEL>* motor_controller);
   //   ~MotorControllerNode();
   void shutdown_callback();
   void startup();
@@ -60,7 +60,7 @@ class MotorControllerNode : public rclcpp::Node {
       "leg_back_r_3",  "leg_back_l_1",  "leg_back_l_2",  "leg_back_l_3",
   };
   const float publish_rate_;
-  MotorController<K_SERVOS_PER_CHANNEL> motor_controller_;
+  MotorController<K_SERVOS_PER_CHANNEL>* motor_controller_;
   pupper_interfaces::msg::JointCommand latest_joint_command_;
   std::thread calibration_thread_;
   std::atomic<bool> stop_;

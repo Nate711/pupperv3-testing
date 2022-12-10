@@ -30,13 +30,12 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t speed_kp,
-                                         float max_speed)
-    : Node("motor_controller_node"),
-      publish_rate_(rate),
-      motor_controller_(position_kp, speed_kp, max_speed, kMotorConnections) {
+MotorControllerNode::MotorControllerNode(float rate,
+                                         MotorController<K_SERVOS_PER_CHANNEL>* motor_controller)
+    : Node("motor_controller_node"), publish_rate_(rate), motor_controller_(motor_controller) {
+  // motor_controller_(position_kp, speed_kp, max_speed, kMotorConnections) {
   // CAN interface setup
-  motor_controller_.begin();
+  motor_controller_->begin();
   std::cout << "Initialized motor controller." << std::endl;
 
   // Joint State joint_state_message_ setup
@@ -73,10 +72,10 @@ void MotorControllerNode::startup() {
 }
 
 void MotorControllerNode::startup_thread_fn() {
-  motor_controller_.calibrate_motors(stop_);
+  motor_controller_->calibrate_motors(stop_);
   MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0},
                                                                           {0, 0, 0, 0, 0, 0}};
-  motor_controller_.blocking_move(stop_, 1000.0, 10.0, command);
+  motor_controller_->blocking_move(stop_, 1000.0, 10.0, command);
 }
 
 /*
@@ -110,18 +109,18 @@ void MotorControllerNode::publish_callback() {
     return;
   }
 
-  if (motor_controller_.is_calibrated()) {
+  if (motor_controller_->is_calibrated()) {
     auto motor_position_targets = split_vector(latest_joint_command_.position_target);
     RCLCPP_INFO(this->get_logger(), "Commanding %lu motors on %lu buses.",
                 latest_joint_command_.position_target.size(), motor_position_targets.size());
     // RCLCPP_INFO(this->get_logger(), motor_position_targets);
-    motor_controller_.position_control(motor_position_targets);
+    motor_controller_->position_control(motor_position_targets);
 
     RCLCPP_INFO(this->get_logger(), "Publishing joint states");
     joint_state_message_.header.stamp = now();
-    auto positions = motor_controller_.actuator_positions();
-    auto velocities = motor_controller_.actuator_velocities();
-    auto efforts = motor_controller_.actuator_efforts();
+    auto positions = motor_controller_->actuator_positions();
+    auto velocities = motor_controller_->actuator_velocities();
+    auto efforts = motor_controller_->actuator_efforts();
 
     for (size_t i = 0; i < joint_state_message_.velocity.size(); i++) {
       int bus_id = i / K_SERVOS_PER_CHANNEL;
