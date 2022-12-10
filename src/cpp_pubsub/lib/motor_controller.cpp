@@ -28,7 +28,9 @@ MOTOR_CONTROLLER::MotorController(float position_kp, uint8_t speed_kp, float max
 }
 
 TEMPLATE_HEADER
-MOTOR_CONTROLLER::~MotorController() {}
+MOTOR_CONTROLLER::~MotorController() {
+  std::cout << "Motor controller destructor called" << std::endl;
+}
 
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::begin() {
@@ -304,7 +306,11 @@ void MOTOR_CONTROLLER::blocking_move(const std::atomic<bool> &should_stop, float
     ticks++;
     std::this_thread::sleep_for(sleep_time);
   }
+  if (should_stop) {
+    std::cout << "----------Blocking move cancelled-----------" << std::endl;
+  }
 
+  std::this_thread::sleep_for(1000us);
   motor_interface_.write_pid_ram_to_all(0, 0, speed_kp_, 0,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKp,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKi);
