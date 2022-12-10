@@ -32,18 +32,16 @@ int main(int argc, char *argv[]) {
   float position_kp = 10000;  // 10000 is good default. units rotor deg/s per output rad
   uint8_t speed_kp = 5;       // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;     // rotor deg/s
-  {
-    MotorController<K_SERVOS_PER_CHANNEL> motor_controller(position_kp, speed_kp, max_speed, kMotorConnections);
-    {
-      auto node = std::make_shared<MotorControllerNode>(rate, &motor_controller);
-      rclcpp::on_shutdown([node]() { node->shutdown_callback(); });
-      node->startup();
-      rclcpp::spin(node);
-      std::cout << "done spinning" << std::endl;
-      std::cout << "node use count: " << node.use_count() << std::endl;
-    }
-  }
+
+  MotorController<K_SERVOS_PER_CHANNEL> motor_controller(position_kp, speed_kp, max_speed,
+                                                         kMotorConnections);
+  auto node = std::make_shared<MotorControllerNode>(rate, &motor_controller);
+  rclcpp::on_shutdown([node]() { node->shutdown_callback(); });
+  node->startup();
+  rclcpp::spin(node);
+  std::cout << "Exited spin" << std::endl;
+  std::cout << "Node use count: " << node.use_count() << std::endl;
   rclcpp::shutdown();
-  std::cout << "shutdown" << std::endl;
+  std::cout << "ROS2 shutdown" << std::endl;
   return 0;
 }
