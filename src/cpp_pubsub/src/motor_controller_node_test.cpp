@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
   uint8_t speed_kp = 5;       // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;     // rotor deg/s
 
+  // FOR SOME REASON IS NECESSARY TO MAKE CONTROLLER OUTSIDE OF NODE FOR PROPER DESTRUCTION
   MotorController<K_SERVOS_PER_CHANNEL> motor_controller(position_kp, speed_kp, max_speed,
                                                          kMotorConnections);
   auto node = std::make_shared<MotorControllerNode>(rate, &motor_controller);
