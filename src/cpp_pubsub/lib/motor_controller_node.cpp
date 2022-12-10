@@ -56,9 +56,9 @@ MotorControllerNode::MotorControllerNode(float rate,
       std::bind(&MotorControllerNode::joint_command_callback, this, _1));
 }
 
-// MotorControllerNode::~MotorControllerNode() {
-//   std::cout << "motor controller node destructor" << std::endl;
-// }
+MotorControllerNode::~MotorControllerNode() {
+  std::cout << "motor controller node destructor" << std::endl;
+}
 
 void MotorControllerNode::shutdown_callback() {
   stop_ = true;
