@@ -31,7 +31,7 @@ using namespace std::chrono_literals;
 using std::placeholders::_1;
 
 MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t speed_kp,
-                                         float max_speed, const std::atomic_bool& stop)
+                                         float max_speed)
     : Node("motor_controller_node"),
       publish_rate_(rate),
       motor_controller_(position_kp, speed_kp, max_speed, kMotorConnections) {
@@ -55,15 +55,29 @@ MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t 
   subscriber_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
       "/joint_commands", rclcpp::SensorDataQoS(),
       std::bind(&MotorControllerNode::joint_command_callback, this, _1));
-
-  motor_controller_.calibrate_motors(stop);
-
-  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0},
-                                                                          {0, 0, 0, 0, 0, 0}};
-  motor_controller_.blocking_move(stop, 1000.0, 10.0, command);
 }
 
-MotorControllerNode::~MotorControllerNode() {}
+// MotorControllerNode::~MotorControllerNode() {
+//   std::cout << "motor controller node destructor" << std::endl;
+// }
+
+void MotorControllerNode::shutdown_callback() {
+  stop_ = true;
+  calibration_thread_.join();
+  std::cout << "shutdown_callback: finished" << std::endl;
+}
+
+void MotorControllerNode::startup() {
+  RCLCPP_INFO(this->get_logger(), "beginning startup thread");
+  calibration_thread_ = std::thread([this]() { this->startup_thread_fn(); });
+}
+
+void MotorControllerNode::startup_thread_fn() {
+  motor_controller_.calibrate_motors(stop_);
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0},
+                                                                          {0, 0, 0, 0, 0, 0}};
+  motor_controller_.blocking_move(stop_, 1000.0, 10.0, command);
+}
 
 /*
  * TODO: add velocity, feedforward, kp, kd

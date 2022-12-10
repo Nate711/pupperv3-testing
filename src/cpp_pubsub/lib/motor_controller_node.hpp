@@ -14,13 +14,13 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <atomic>
 
 #include <pupper_interfaces/msg/joint_command.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -38,20 +38,21 @@ const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel:
 
 class MotorControllerNode : public rclcpp::Node {
  public:
-  MotorControllerNode(float rate, float position_kp, uint8_t speed_kp, float max_speed, const std::atomic_bool& stop);
-  ~MotorControllerNode();
-  static std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> split_vector(
+  MotorControllerNode(float rate, float position_kp, uint8_t speed_kp, float max_speed);
+  //   ~MotorControllerNode();
+  void shutdown_callback();
+  void startup();
+  static typename MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> split_vector(
       std::vector<double> vector);
 
  private:
+  void startup_thread_fn();
   void publish_callback();
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_;
   rclcpp::Subscription<pupper_interfaces::msg::JointCommand>::SharedPtr subscriber_;
   sensor_msgs::msg::JointState joint_state_message_;
   void joint_command_callback(pupper_interfaces::msg::JointCommand joint_command);
-  // static std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> split_vector(std::vector<double>
-  // vector);
 
   const std::string joint_names_[12] = {
       "leg_front_r_1", "leg_front_r_2", "leg_front_r_3", "leg_front_l_1",
@@ -61,4 +62,6 @@ class MotorControllerNode : public rclcpp::Node {
   const float publish_rate_;
   MotorController<K_SERVOS_PER_CHANNEL> motor_controller_;
   pupper_interfaces::msg::JointCommand latest_joint_command_;
+  std::thread calibration_thread_;
+  std::atomic<bool> stop_;
 };
