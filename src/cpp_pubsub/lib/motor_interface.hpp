@@ -23,6 +23,21 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+/*
+ * Current data structures:
+ * e.g.
+ * motor_connections_ = {CAN0, CAN1}
+ * read_threads_ = {read CAN0, read CAN1}
+ *
+ * Should do:
+ * Pass in either array with index being
+ * motor ID in the robot and value being {CAN channel, CAN ID}
+ * Then generate reverse map<can channel, map<can id, motor ID>>
+ * This option makes more sense because less likely to mess it up.
+ * Then can expose like position()->vector function, etc
+ * The reading threads have to make map calls though to store data (~1ns per lookup?)
+ */
+
 static const int kNumCANChannels = 4;
 
 enum class CANChannel {
@@ -152,7 +167,7 @@ class MotorInterface {
 
   // float latest_multi_angle_;
   RobotMotorData latest_data_;
-  std::array<std::thread, kNumCANChannels> read_threads_;
+  std::vector<std::shared_ptr<std::thread>> read_threads_;
   std::mutex latest_data_lock_;
 
   // DEBUG ONLY

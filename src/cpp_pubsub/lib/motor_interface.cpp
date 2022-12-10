@@ -41,15 +41,17 @@ MOTOR_INTERFACE::~MotorInterface() {
   std::cout << "Calling motor interface destructor." << std::endl;
   std::cout << "Stopping all motors." << std::endl;
   command_all_stop();
-  std::cout << "Signaled read threads to stop." << std::endl;
+  std::cout << "Signaling read threads to stop." << std::endl;
   should_read_.store(false);
-  // Causes lots of can socket exceptions / errors
-  // for (std::thread &active_thread : read_threads_)
-  // {
-  //     std::cout << "Joining thread. ";
-  //     active_thread.join();
-  // }
-  std::cout << "Closing can buses" << std::endl;
+  //   Causes lots of can socket exceptions / errors
+  for (size_t i = 0; i < read_threads_.size(); i++) {
+    auto active_thread = read_threads_.at(i);
+    if (active_thread) {
+      std::cout << "Joining read thread for " << channel_str(motor_connections_.at(i)) << ". ";
+      active_thread->join();
+    }
+  }
+
   close_canbuses();
 }
 
@@ -62,10 +64,11 @@ void MOTOR_INTERFACE::initialize_canbuses() {
 
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::close_canbuses() {
+  std::cout << "\nClosing can bus sockets...";
   for (const auto &bus : motor_connections_) {
     close(canbus_to_fd_.at(static_cast<int>(bus)));
   }
-  std::cout << "Closed can bus sockets." << std::endl;
+  std::cout << "closed." << std::endl;
 }
 
 TEMPLATE_HEADER
@@ -290,8 +293,8 @@ void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame)
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::start_read_threads() {
   for (auto canbus : motor_connections_) {
-    read_threads_.at(static_cast<int>(canbus)) =
-        std::thread(&MOTOR_INTERFACE::read_thread, this, canbus);
+    read_threads_.push_back(
+        std::make_shared<std::thread>(&MOTOR_INTERFACE::read_thread, this, canbus));
   }
 }
 
