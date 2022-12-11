@@ -57,18 +57,15 @@ MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t 
       std::bind(&MotorControllerNode::joint_command_callback, this, _1));
 }
 
-// MotorControllerNode::~MotorControllerNode() {
-//   std::cout << "motor controller node destructor" << std::endl;
-// }
-
-void MotorControllerNode::shutdown_callback() {
+MotorControllerNode::~MotorControllerNode() {
+  std::cout << "Destroying motor controller node..."<<std::endl;;
   stop_ = true;
   calibration_thread_.join();
-  std::cout << "shutdown_callback: finished" << std::endl;
+  std::cout << "Finished destroying motor controller." << std::endl;
 }
 
 void MotorControllerNode::startup() {
-  RCLCPP_INFO(this->get_logger(), "beginning startup thread");
+  RCLCPP_INFO(this->get_logger(), "Beginning startup thread");
   calibration_thread_ = std::thread([this]() { this->startup_thread_fn(); });
 }
 

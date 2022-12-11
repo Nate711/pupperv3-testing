@@ -39,8 +39,7 @@ const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel:
 class MotorControllerNode : public rclcpp::Node {
  public:
   MotorControllerNode(float rate, float position_kp, uint8_t speed_kp, float max_speed);
-  //   ~MotorControllerNode();
-  void shutdown_callback();
+  ~MotorControllerNode();
   void startup();
   static typename MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> split_vector(
       std::vector<double> vector);

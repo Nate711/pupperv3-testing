@@ -32,22 +32,12 @@ int main(int argc, char *argv[]) {
   float position_kp = 10000;  // 10000 is good default. units rotor deg/s per output rad
   uint8_t speed_kp = 5;       // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;     // rotor deg/s
-  {
-    auto node = std::make_shared<MotorControllerNode>(rate, position_kp, speed_kp, max_speed);
-    // rclcpp::on_shutdown([node]() { node->shutdown_callback(); });
-    node->startup();
-    rclcpp::spin(node);
-    std::cout << "done spinning" << std::endl;
-    std::cout << "node use count: " << node.use_count() << std::endl;
 
-    // MotorControllerNode node(rate, position_kp, speed_kp, max_speed);
-    // rclcpp::on_shutdown([&node]() { node->shutdown_callback(); });
-    // node.startup();
-    // rclcpp::spin(*node);
-    // std::cout << "done spinning" << std::endl;
-    // std::cout << "node use count: " << node.use_count() << std::endl;
-  }
+  auto node = std::make_shared<MotorControllerNode>(rate, position_kp, speed_kp, max_speed);
+  node->startup();
+  rclcpp::spin(node);
+  std::cout << "rclcpp done spinning" << std::endl;
   rclcpp::shutdown();
-  std::cout << "shutdown" << std::endl;
+  std::cout << "rclcpp shutdown" << std::endl;
   return 0;
 }
