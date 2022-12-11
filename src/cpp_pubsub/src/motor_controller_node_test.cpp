@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     rate = std::stof(argv[1]);
   }
-  std::cout << "Rate: " << rate << std::endl;
+  std::cout << "Joint state publish rate: " << rate << std::endl;
 
   float position_kp = 10000;  // 10000 is good default. units rotor deg/s per output rad
   uint8_t speed_kp = 5;       // 5 is good default. units A/rotor deg/s

@@ -32,6 +32,7 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  -readability-function-cognitive-complexity,
   -google-readability-namespace-comments,
   -google-runtime-int,
   -google-runtime-references,
