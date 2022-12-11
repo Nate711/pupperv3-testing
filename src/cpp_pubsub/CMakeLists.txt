@@ -25,9 +25,9 @@ ament_target_dependencies(motor_controller_node rclcpp std_msgs sensor_msgs
                           pupper_interfaces)
 
 # Executables
-add_executable(talker src/joint_state_publisher.cpp)
-target_link_libraries(talker motor_interface)
-ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
+add_executable(joint_state_publisher src/joint_state_publisher.cpp)
+target_link_libraries(joint_state_publisher motor_interface)
+ament_target_dependencies(joint_state_publisher rclcpp std_msgs sensor_msgs)
 
 add_executable(motor_controller_node_test src/motor_controller_node_test.cpp)
 target_link_libraries(motor_controller_node_test motor_controller_node)
@@ -47,13 +47,17 @@ target_link_libraries(my_test motor_controller_node)
 add_executable(calibration_test src/motor_controller_calibration_test.cpp)
 target_link_libraries(calibration_test motor_controller)
 
-install(TARGETS talker DESTINATION lib/${PROJECT_NAME})
+add_executable(talker src/talker.cpp)
+ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
+
+install(TARGETS joint_state_publisher DESTINATION lib/${PROJECT_NAME})
 install(TARGETS can_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS pd_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_node_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS my_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS calibration_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS talker DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

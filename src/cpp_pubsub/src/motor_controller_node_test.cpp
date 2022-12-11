@@ -36,12 +36,14 @@ int main(int argc, char *argv[]) {
   // FOR SOME REASON IS NECESSARY TO MAKE CONTROLLER OUTSIDE OF NODE FOR PROPER DESTRUCTION
   MotorController<K_SERVOS_PER_CHANNEL> motor_controller(position_kp, speed_kp, max_speed,
                                                          kMotorConnections);
-  auto node = std::make_shared<MotorControllerNode>(rate, &motor_controller);
-  rclcpp::on_shutdown([node]() { node->shutdown_callback(); });
-  node->startup();
-  rclcpp::spin(node);
-  std::cout << "Exited spin" << std::endl;
-  std::cout << "Node use count: " << node.use_count() << std::endl;
+  {
+    auto node = std::make_shared<MotorControllerNode>(rate, &motor_controller);
+    // rclcpp::on_shutdown([node]() { node->shutdown_callback(); });
+    node->startup();
+    rclcpp::spin(node);
+    std::cout << "Exited spin" << std::endl;
+    std::cout << "Node use count: " << node.use_count() << std::endl;
+  }
   rclcpp::shutdown();
   std::cout << "ROS2 shutdown" << std::endl;
   return 0;

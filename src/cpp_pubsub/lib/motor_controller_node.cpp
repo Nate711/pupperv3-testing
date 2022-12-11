@@ -58,7 +58,10 @@ MotorControllerNode::MotorControllerNode(float rate,
 
 MotorControllerNode::~MotorControllerNode() {
   // This destructor is not necessary for destruction of object members
-  std::cout << "motor controller node destructor" << std::endl;
+  std::cout << "******* motor controller node destructor ******** " << std::endl;
+  stop_ = true;
+  calibration_thread_.join();
+  std::cout << "motor controller node destructor finished" << std::endl;
 }
 
 void MotorControllerNode::shutdown_callback() {

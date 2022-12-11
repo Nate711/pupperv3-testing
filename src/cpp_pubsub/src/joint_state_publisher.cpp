@@ -33,7 +33,8 @@ using namespace std::chrono_literals;
 
 class PupperJointStatePublisher : public rclcpp::Node {
  public:
-  PupperJointStatePublisher(float rate) : Node("pupper_joint_state_publisher"), publish_rate(rate) {
+  PupperJointStatePublisher(float rate, const std::atomic<bool>& shutdown_flag)
+      : Node("pupper_joint_state_publisher"), publish_rate(rate) {
     // Node setup
     publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
     timer_ = this->create_wall_timer(rclcpp::WallRate(publish_rate).period(),
@@ -53,7 +54,10 @@ class PupperJointStatePublisher : public rclcpp::Node {
     motor_interface_->initialize_motors();  // not needed if you just want angles
     motor_interface_->start_read_threads();
   }
-  ~PupperJointStatePublisher() {}
+  ~PupperJointStatePublisher() {
+    std::cout << "Joint state publisher node destructor" << std::endl;
+  }
+  void on_shutdown_callback() { std::cout << "on shutdown callback" << std::endl; }
 
  private:
   void publish_callback() {
@@ -105,15 +109,22 @@ class PupperJointStatePublisher : public rclcpp::Node {
   std::unique_ptr<MotorInterface<K_SERVOS_PER_CHANNEL>> motor_interface_;
 };
 
-int main(int argc, char *argv[]) {
+std::atomic<bool> global_shutdown = false;
+
+void on_shutdown_callback() { global_shutdown = true; }
+
+int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
   float rate = 500;
   if (argc > 1) {
     rate = std::stof(argv[1]);
   }
   std::cout << "Rate: " << rate << std::endl;
-
-  rclcpp::spin(std::make_shared<PupperJointStatePublisher>(/*rate=*/rate));
+  auto node = std::make_shared<PupperJointStatePublisher>(/*rate=*/rate, global_shutdown);
+  //   rclcpp::on_shutdown([node]() { node->on_shutdown_callback(); });
+  rclcpp::on_shutdown(on_shutdown_callback);
+  rclcpp::spin(node);
+  std::cout << "Node use count: " << node.use_count() << std::endl;
   rclcpp::shutdown();
   return 0;
 }
