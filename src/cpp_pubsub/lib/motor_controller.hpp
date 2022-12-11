@@ -23,9 +23,11 @@ class MotorController {
                   std::vector<CANChannel> motor_connections);
   ~MotorController();
   void begin();
+  void stop();
 
   void position_control(const ActuatorMatrix<float> &goal_positions);
-  void position_control(const ActuatorMatrix<float> &goal_positions, float max_speed);
+  void position_control(const ActuatorMatrix<float> &goal_positions, float position_kp,
+                        float max_speed, bool override_busy);
 
   // WARNING: UNTESTED
   void velocity_control(const ActuatorMatrix<float> &vel_targets);
@@ -53,9 +55,11 @@ class MotorController {
 
   void calibrate_motors(const std::atomic<bool> &should_stop);
 
-  void blocking_move(const std::atomic<bool> &should_stop, float max_speed, float speed_kp,
-                     const ActuatorMatrix<float> &goal_position, float speed_tolerance = 0.01,
-                     int wait_ticks = 20);
+  inline bool is_busy() { return busy_; }
+
+  void blocking_move(const std::atomic<bool> &should_stop, float max_speed, float position_kp,
+                     uint8_t speed_kp, const ActuatorMatrix<float> &goal_position,
+                     float speed_tolerance = 0.01, int wait_ticks = 20);
 
  private:
   template <typename T>
@@ -72,6 +76,8 @@ class MotorController {
   void warn_actuator_matrix_invalid(const ActuatorMatrix<T> &mat);
   int flat_index(int bus_idx, int motor_idx);
   int flat_size();
+  inline void set_busy() { busy_ = true; }
+  inline void set_available() { busy_ = false; }
 
   std::mutex motor_interface_lock_;
   MotorInterface<ServosPerChannel> motor_interface_;
@@ -82,4 +88,7 @@ class MotorController {
   std::atomic<bool> is_robot_calibrated_;
   ActuatorMatrix<float> measured_endstop_positions_;
   ActuatorMatrix<float> endstop_positions_;
+
+  // Blocking moves set busy to true to prevent other control actions from taking place
+  std::atomic<bool> busy_;
 };

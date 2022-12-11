@@ -31,7 +31,8 @@
 
 #define K_SERVOS_PER_CHANNEL 6
 
-const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
+const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0};
+// const std::vector<CANChannel> kMotorConnections = {CANChannel::CAN0, CANChannel::CAN1};
 
 /* This example creates a subclass of Node and uses std::bind() to register a
  * member function as a callback from the timer. */
@@ -58,6 +59,8 @@ class MotorControllerNode : public rclcpp::Node {
       "leg_front_l_2", "leg_front_l_3", "leg_back_r_1",  "leg_back_r_2",
       "leg_back_r_3",  "leg_back_l_1",  "leg_back_l_2",  "leg_back_l_3",
   };
+  //   const std::string joint_names_[6] = {"leg_front_r_1", "leg_front_r_2", "leg_front_r_3",
+  //                                        "leg_front_l_1", "leg_front_l_2", "leg_front_l_3"};
   const float publish_rate_;
   MotorController<K_SERVOS_PER_CHANNEL> motor_controller_;
   pupper_interfaces::msg::JointCommand latest_joint_command_;

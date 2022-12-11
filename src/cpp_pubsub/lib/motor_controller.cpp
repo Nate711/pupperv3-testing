@@ -15,11 +15,13 @@ MOTOR_CONTROLLER::MotorController(float position_kp, uint8_t speed_kp, float max
       position_kp_(position_kp),
       speed_kp_(speed_kp),
       max_speed_(max_speed),
-      is_robot_calibrated_(false) {
+      is_robot_calibrated_(false),
+      busy_(false) {
   zero_actuator_matrix(measured_endstop_positions_, num_can_buses_);
+  zero_actuator_matrix(endstop_positions_, num_can_buses_);
 
   // TODO: replace with parameter in the future
-  endstop_positions_ = {{-135, 90, 68, 135, -90, -68}, {-135, +90, +68, 135, -90, -68}};
+  endstop_positions_ = {{-135, 90, 68, 135, -90, -68}, {-135, 90, 68, 135, -90, -68}};
   for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
     for (int motor_idx = 0; motor_idx < ServosPerChannel; motor_idx++) {
       endstop_positions_.at(bus_idx).at(motor_idx) *= M_PI / 180.0F;
@@ -41,7 +43,16 @@ void MOTOR_CONTROLLER::begin() {
   motor_interface_.write_pid_ram_to_all(0, 0, speed_kp_, 0,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKp,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKi);
+  for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
+    for (int motor_idx = 0; motor_idx < ServosPerChannel; motor_idx++) {
+      CANChannel bus = kAllCANChannels.at(bus_idx);
+      motor_interface_.command_velocity(bus, motor_idx + 1, 0.0);
+    }
+  }
 }
+
+TEMPLATE_HEADER
+void MOTOR_CONTROLLER::stop() { motor_interface_.command_all_stop(); }
 
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::throw_on_not_calibrated(const std::string &msg) {
@@ -67,11 +78,14 @@ float MOTOR_CONTROLLER::raw_to_calibrated(float value, float measured_endstop_po
 
 TEMPLATE_HEADER
 typename MOTOR_CONTROLLER::ActuatorMatrix<float> MOTOR_CONTROLLER::actuator_positions() {
-  ActuatorMatrix<float> data;
+  ActuatorMatrix<float> data(num_can_buses_);
   auto motor_data = motor_interface_.motor_data_safe();
   for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
     for (int motor_idx = 0; motor_idx < ServosPerChannel; motor_idx++) {
-      data.at(bus_idx).at(motor_idx) = motor_data.at(bus_idx).at(motor_idx).common.output_rads;
+      auto raw = motor_data.at(bus_idx).at(motor_idx).common.output_rads;
+      auto measured_endstop = measured_endstop_positions_.at(bus_idx).at(motor_idx);
+      auto endstop = endstop_positions_.at(bus_idx).at(motor_idx);
+      data.at(bus_idx).at(motor_idx) = raw_to_calibrated(raw, measured_endstop, endstop);
     }
   }
   return data;
@@ -79,7 +93,7 @@ typename MOTOR_CONTROLLER::ActuatorMatrix<float> MOTOR_CONTROLLER::actuator_posi
 
 TEMPLATE_HEADER
 typename MOTOR_CONTROLLER::ActuatorMatrix<float> MOTOR_CONTROLLER::actuator_velocities() {
-  ActuatorMatrix<float> data;
+  ActuatorMatrix<float> data(num_can_buses_);
   auto motor_data = motor_interface_.motor_data_safe();
   for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
     for (int motor_idx = 0; motor_idx < ServosPerChannel; motor_idx++) {
@@ -92,7 +106,7 @@ typename MOTOR_CONTROLLER::ActuatorMatrix<float> MOTOR_CONTROLLER::actuator_velo
 
 TEMPLATE_HEADER
 typename MOTOR_CONTROLLER::ActuatorMatrix<float> MOTOR_CONTROLLER::actuator_efforts() {
-  ActuatorMatrix<float> data;
+  ActuatorMatrix<float> data(num_can_buses_);
   auto motor_data = motor_interface_.motor_data_safe();
   for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
     for (int motor_idx = 0; motor_idx < ServosPerChannel; motor_idx++) {
@@ -105,13 +119,18 @@ typename MOTOR_CONTROLLER::ActuatorMatrix<float> MOTOR_CONTROLLER::actuator_effo
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::position_control(
     const MOTOR_CONTROLLER::ActuatorMatrix<float> &goal_positions) {
-  position_control(goal_positions, max_speed_);
+  position_control(goal_positions, position_kp_, max_speed_, false);
 }
 
 // TODO: don't use vectors, use arrays or something
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::position_control(
-    const MOTOR_CONTROLLER::ActuatorMatrix<float> &goal_positions, float max_speed) {
+    const MOTOR_CONTROLLER::ActuatorMatrix<float> &goal_positions, float position_kp,
+    float max_speed, bool override_busy) {
+  if (is_busy() && !override_busy) {
+    std::cout << "Ignoring position_control call because robot is busy" << std::endl;
+    return;
+  }
   throw_on_not_calibrated("position_control: robot not calibrated");
   warn_actuator_matrix_invalid<float>(goal_positions);
 
@@ -124,13 +143,11 @@ void MOTOR_CONTROLLER::position_control(
       float corrected_position = raw_to_calibrated(
           motor_data.common.output_rads, measured_endstop_positions_.at(bus_idx).at(motor_id - 1),
           endstop_positions_.at(bus_idx).at(motor_id - 1));
-
+      float position_error = goal_position - corrected_position;
+      float velocity_command = position_error * position_kp;  // in rotor deg/s
+      velocity_command = std::clamp(velocity_command, -max_speed, max_speed);
       std::cout << "|| p*: " << goal_position << " cp: " << corrected_position
                 << " rp: " << motor_data.common.output_rads << " ";
-
-      float position_error = goal_position - corrected_position;
-      float velocity_command = position_error * position_kp_;  // in rotor deg/s
-      velocity_command = std::clamp(velocity_command, -max_speed, max_speed);
       motor_interface_.command_velocity(bus, motor_id, velocity_command);
     }
     std::cout << std::endl;
@@ -145,6 +162,10 @@ void MOTOR_CONTROLLER::position_control(
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::velocity_control(
     const MOTOR_CONTROLLER::ActuatorMatrix<float> &vel_targets) {
+  if (is_busy()) {
+    std::cout << "Ignoring velocity_control call because robot is busy" << std::endl;
+    return;
+  }
   throw_on_not_calibrated("velocity_control: robot not calibrated");
   warn_actuator_matrix_invalid<float>(vel_targets);
 
@@ -184,7 +205,7 @@ TEMPLATE_HEADER
 void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
   std::cout << "--------------- BEGINNING CALIBRATION ---------------" << std::endl;
   using namespace std::chrono_literals;
-  const float velocity_target = 1000;  // rotor deg/s
+  const float velocity_target = 750;  // rotor deg/s
   // TODO: make this cal directions a parameter so that user isn't fixed to 12 motors or this
   // pattern
   const std::vector<int> cal_directions = {-1, 1, 1, 1, -1, -1, -1, 1, 1, 1, -1, -1};
@@ -194,7 +215,7 @@ void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
   const int calibration_threshold = 50;
   const int start_averaging_ticks = 10;
   const int averaging_ticks = calibration_threshold - start_averaging_ticks;
-  const std::chrono::duration sleep_time = 2000us;
+  const std::chrono::duration sleep_time = 5000us;  // 2000us;
 
   is_robot_calibrated_ = false;
   std::vector<int> loops_at_endstop(num_can_buses_ * ServosPerChannel, 0);
@@ -211,12 +232,16 @@ void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
                                         MotorInterface<ServosPerChannel>::kDefaultIqKp,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKi);
 
-  // ----------------- SUPER DUPER IMPORTANT ------------------------//
-  // ----------------- SUPER DUPER IMPORTANT ------------------------//
-  // -----------Reset to all_of done testing----  ------------------------//
-  // ----------------- SUPER DUPER IMPORTANT ------------------------//
+  // DEBUG ONLY, OVERRIDING CALIBRATION
+  // loops_at_endstop.at(0) = 100;
+  // loops_at_endstop.at(1) = 100;
+  // loops_at_endstop.at(2) = 100;
+  // loops_at_endstop.at(3) = 100;
+  // loops_at_endstop.at(4) = 100;
+  // loops_at_endstop.at(5) = 100;
+
   while (!should_stop &&
-         !std::any_of(loops_at_endstop.begin(), loops_at_endstop.end(), calibrated)) {
+         !std::all_of(loops_at_endstop.begin(), loops_at_endstop.end(), calibrated)) {
     // Get latest data from motors in thread-safe way
     RobotMotorData motor_data = motor_interface_.motor_data_safe();
 
@@ -251,10 +276,8 @@ void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
         }
 
         // Debug printing
-        std::cout << "p: " << output_rads << " v*: " << command_velocity
-                  << " v: " << output_rad_per_sec << " I: " << current
-                  << " ticks: " << loops_at_endstop.at(idx)
-                  << " endstop: " << measured_endstop_positions_.at(bus_idx).at(motor_id - 1);
+        std::cout << " || v: " << output_rad_per_sec << " I: " << current
+                  << " ticks: " << loops_at_endstop.at(idx);
       }
     }
     std::cout << std::endl;
@@ -270,20 +293,21 @@ void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
 
 TEMPLATE_HEADER
 void MOTOR_CONTROLLER::blocking_move(const std::atomic<bool> &should_stop, float max_speed,
-                                     float move_speed_kp,
+                                     float position_kp, uint8_t move_speed_kp,
                                      const ActuatorMatrix<float> &goal_position,
                                      float speed_tolerance, int wait_ticks) {
   std::cout << "--------------- Starting blocking move-----------" << std::endl;
+  set_busy();
   using namespace std::chrono_literals;
-  auto sleep_time = 2000us;
+  auto sleep_time = 5000us;
   auto float_within_tolerance = [speed_tolerance](float val) {
     return std::abs(val) < speed_tolerance;
   };
-
   auto vec_within_tolerance = [float_within_tolerance](std::vector<float> vec) {
     return std::all_of(vec.begin(), vec.end(), float_within_tolerance);
   };
 
+  // Set special blocking move gains
   motor_interface_.write_pid_ram_to_all(0, 0, move_speed_kp, 0,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKp,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKi);
@@ -294,7 +318,7 @@ void MOTOR_CONTROLLER::blocking_move(const std::atomic<bool> &should_stop, float
   std::vector<float> actuator_vels(flat_size(), 0.0);
   int ticks = 0;
   while (!should_stop && !(vec_within_tolerance(actuator_vels) && (ticks > wait_ticks))) {
-    position_control(goal_position, max_speed);
+    position_control(goal_position, position_kp, max_speed, true);
 
     auto motor_data = motor_interface_.motor_data_safe();
     for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
@@ -310,12 +334,14 @@ void MOTOR_CONTROLLER::blocking_move(const std::atomic<bool> &should_stop, float
     std::cout << "----------Blocking move cancelled-----------" << std::endl;
   }
 
+  // Reset PD gains to default
   std::this_thread::sleep_for(1000us);
   motor_interface_.write_pid_ram_to_all(0, 0, speed_kp_, 0,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKp,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKi);
   std::this_thread::sleep_for(1000us);
 
+  set_available();
   std::cout << "--------------- Finished blocking move-----------" << std::endl;
 }
 

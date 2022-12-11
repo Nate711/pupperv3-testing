@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
 
   // Create position controller
   MotorController<K_SERVOS_PER_CHANNEL> controller(/*position_kp (dps per output rad)=*/50000.0,
-                                                   /*speed_kp=*/4,
+                                                   /*speed_kp=*/5,
                                                    /*max_speed (dps)=*/5000.0,
                                                    /*can channels*/ {CANChannel::CAN0});
   controller.begin();
@@ -31,10 +31,11 @@ int main(int argc, char *argv[]) {
 
   controller.calibrate_motors(quit);
 
-  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0}};
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 1.0, 0, 0, -1.0}};
   controller.blocking_move(quit,
                            /*max_speed(rotor deg/s)=*/1000.0,
-                           /*speed_kp=*/10.0, command,
+                           /*position_kp=*/20000.0,
+                           /*speed_kp=*/10, command,
                            /*speed_tolerance(output rad/s)=*/0.01,
                            /*wait_ticks=*/50);
   return 0;

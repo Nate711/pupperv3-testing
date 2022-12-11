@@ -58,7 +58,7 @@ MotorControllerNode::MotorControllerNode(float rate, float position_kp, uint8_t 
 }
 
 MotorControllerNode::~MotorControllerNode() {
-  std::cout << "Destroying motor controller node..."<<std::endl;;
+  std::cout << "Destroying motor controller node..." << std::endl;
   stop_ = true;
   calibration_thread_.join();
   std::cout << "Finished destroying motor controller." << std::endl;
@@ -71,11 +71,10 @@ void MotorControllerNode::startup() {
 
 void MotorControllerNode::startup_thread_fn() {
   motor_controller_.calibrate_motors(stop_);
-  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 0, 0, 0, 0},
-                                                                          {0, 0, 0, 0, 0, 0}};
-  motor_controller_.blocking_move(stop_, 1000.0, 10.0, command);
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 1.0, 0, 0, -1.0},
+                                                                          {0, 0, 1.0, 0, 0, -1.0}};
+  motor_controller_.blocking_move(stop_, 750.0, 20000.0, 10, command);
 }
-
 /*
  * TODO: add velocity, feedforward, kp, kd
  */
@@ -87,8 +86,7 @@ void MotorControllerNode::joint_command_callback(
 
 std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> MotorControllerNode::split_vector(
     std::vector<double> vector) {
-  std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> data;
-  assert(vector.size() % K_SERVOS_PER_CHANNEL == 0);
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> data;
   for (size_t i = 0; i < vector.size() / K_SERVOS_PER_CHANNEL; i++) {
     std::array<float, K_SERVOS_PER_CHANNEL> section;
     for (size_t j = 0; j < K_SERVOS_PER_CHANNEL; j++) {
@@ -111,7 +109,6 @@ void MotorControllerNode::publish_callback() {
     auto motor_position_targets = split_vector(latest_joint_command_.position_target);
     RCLCPP_INFO(this->get_logger(), "Commanding %lu motors on %lu buses.",
                 latest_joint_command_.position_target.size(), motor_position_targets.size());
-    // RCLCPP_INFO(this->get_logger(), motor_position_targets);
     motor_controller_.position_control(motor_position_targets);
 
     RCLCPP_INFO(this->get_logger(), "Publishing joint states");
@@ -120,7 +117,7 @@ void MotorControllerNode::publish_callback() {
     auto velocities = motor_controller_.actuator_velocities();
     auto efforts = motor_controller_.actuator_efforts();
 
-    for (size_t i = 0; i < joint_state_message_.velocity.size(); i++) {
+    for (size_t i = 0; i < positions.size() * K_SERVOS_PER_CHANNEL; i++) {
       int bus_id = i / K_SERVOS_PER_CHANNEL;
       int motor_id = i % K_SERVOS_PER_CHANNEL;
       joint_state_message_.position.at(i) = positions.at(bus_id).at(motor_id);
@@ -128,7 +125,6 @@ void MotorControllerNode::publish_callback() {
       // TODO: make Nm
       joint_state_message_.effort.at(i) = efforts.at(bus_id).at(motor_id);
     }
-    // RCLCPP_INFO(this->get_logger(), "Publishing joint state");
     publisher_->publish(joint_state_message_);
   }
 }

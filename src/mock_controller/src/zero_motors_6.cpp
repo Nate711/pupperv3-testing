@@ -37,16 +37,13 @@ class MockController : public rclcpp::Node {
     timer_ = this->create_wall_timer(rclcpp::WallRate(publish_rate).period(),
                                      std::bind(&MockController::publish_callback, this));
 
-    message.name = {
-        "leg_front_r_1", "leg_front_r_2", "leg_front_r_3", "leg_front_l_1",
-        "leg_front_l_2", "leg_front_l_3", "leg_back_r_1",  "leg_back_r_2",
-        "leg_back_r_3",  "leg_back_l_1",  "leg_back_l_2",  "leg_back_l_3",
-    };
-    message.kp = std::vector<double>(12, 5.0);
-    message.kd = std::vector<double>(12, 0.5);
-    message.position_target = std::vector<double>(12, 0.0);
-    message.velocity_target = std::vector<double>(12, 0.0);
-    message.feedforward_torque = std::vector<double>(12, 0.0);
+    message.name = {"leg_front_r_1", "leg_front_r_2", "leg_front_r_3",
+                    "leg_front_l_1", "leg_front_l_2", "leg_front_l_3"};
+    message.kp = std::vector<double>(6, 5.0);
+    message.kd = std::vector<double>(6, 0.5);
+    message.position_target = std::vector<double>(6, 0.0);
+    message.velocity_target = std::vector<double>(6, 0.0);
+    message.feedforward_torque = std::vector<double>(6, 0.0);
 
     start_ = now();
   }

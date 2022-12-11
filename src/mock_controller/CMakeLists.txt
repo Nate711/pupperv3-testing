@@ -17,9 +17,13 @@ add_executable(mock_pub src/mock_pub.cpp)
 ament_target_dependencies(mock_pub rclcpp std_msgs pupper_interfaces)
 install(TARGETS mock_pub DESTINATION lib/${PROJECT_NAME})
 
-add_executable(zero_motors src/zero_motors.cpp)
-ament_target_dependencies(zero_motors rclcpp std_msgs pupper_interfaces)
-install(TARGETS zero_motors DESTINATION lib/${PROJECT_NAME})
+add_executable(zero_motors_12 src/zero_motors.cpp)
+ament_target_dependencies(zero_motors_12 rclcpp std_msgs pupper_interfaces)
+install(TARGETS zero_motors_12 DESTINATION lib/${PROJECT_NAME})
+
+add_executable(zero_motors_6 src/zero_motors_6.cpp)
+ament_target_dependencies(zero_motors_6 rclcpp std_msgs pupper_interfaces)
+install(TARGETS zero_motors_6 DESTINATION lib/${PROJECT_NAME})
 
 
 if(BUILD_TESTING)

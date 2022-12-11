@@ -34,6 +34,11 @@ MOTOR_INTERFACE::MotorInterface(std::vector<CANChannel> motor_connections)
   // DEBUG ONLY
   debug_start_ = time_now();
   canbus_to_fd_.fill(-1);
+  for (size_t bus_idx = 0; bus_idx < latest_data_.size(); bus_idx++) {
+    for (size_t motor_idx = 0; motor_idx < latest_data_.at(0).size(); motor_idx++) {
+      latest_data_.at(bus_idx).at(motor_idx) = MotorData{};
+    }
+  }
 }
 
 TEMPLATE_HEADER
@@ -187,7 +192,7 @@ void MOTOR_INTERFACE::update_rotation(CommonResponse &common) {
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::read_blocking(CANChannel bus) {
   struct can_frame frame = read_canframe_blocking(bus);
-  // std::cout << "CAN id: " << frame.can_id << std::endl;
+  // std::cout << "Bus: " << channel_str(bus) << " CAN ID: " << frame.can_id << std::endl;
   parse_frame(bus, frame);
 }
 
