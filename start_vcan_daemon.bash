@@ -1,0 +1,1 @@
+~/fdcanusb/sw/fdcanusb_daemon -F -v /dev/fdcanusb vcan0
