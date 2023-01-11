@@ -209,10 +209,10 @@ void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
   // TODO: make this cal directions a parameter so that user isn't fixed to 12 motors or this
   // pattern
   const std::vector<int> cal_directions = {-1, 1, 1, 1, -1, -1, -1, 1, 1, 1, -1, -1};
-  const float calibration_speed_kp = 10;
+  const float calibration_speed_kp = 30;
   const float speed_threshold = 0.05;
-  const float current_threshold = 1.0;
-  const int calibration_threshold = 50;
+  const float current_threshold = 4.0;
+  const int calibration_threshold = 20;
   const int start_averaging_ticks = 10;
   const int averaging_ticks = calibration_threshold - start_averaging_ticks;
   const std::chrono::duration sleep_time = 5000us;  // 2000us;
@@ -239,6 +239,7 @@ void MOTOR_CONTROLLER::calibrate_motors(const std::atomic<bool> &should_stop) {
   // loops_at_endstop.at(3) = 100;
   // loops_at_endstop.at(4) = 100;
   // loops_at_endstop.at(5) = 100;
+  // loops_at_endstop.at(4 + 6) = 100;
 
   while (!should_stop &&
          !std::all_of(loops_at_endstop.begin(), loops_at_endstop.end(), calibrated)) {
@@ -340,6 +341,13 @@ void MOTOR_CONTROLLER::blocking_move(const std::atomic<bool> &should_stop, float
                                         MotorInterface<ServosPerChannel>::kDefaultIqKp,
                                         MotorInterface<ServosPerChannel>::kDefaultIqKi);
   std::this_thread::sleep_for(1000us);
+
+  for (size_t bus_idx = 0; bus_idx < num_can_buses_; bus_idx++) {
+    CANChannel bus = kAllCANChannels.at(bus_idx);
+    for (int motor_id = 1; motor_id <= ServosPerChannel; motor_id++) {
+      motor_interface_.command_velocity(bus, motor_id, 0);
+    }
+  }
 
   set_available();
   std::cout << "--------------- Finished blocking move-----------" << std::endl;

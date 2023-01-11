@@ -22,16 +22,18 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigint_handler);
 
   // Create position controller
-  MotorController<K_SERVOS_PER_CHANNEL> controller(/*position_kp (dps per output rad)=*/50000.0,
-                                                   /*speed_kp=*/5,
-                                                   /*max_speed (dps)=*/5000.0,
-                                                   /*can channels*/ {CANChannel::CAN0});
+  MotorController<K_SERVOS_PER_CHANNEL> controller(
+      /*position_kp (dps per output rad)=*/50000.0,
+      /*speed_kp=*/5,
+      /*max_speed (dps)=*/5000.0,
+      /*can channels*/ {CANChannel::CAN0, CANChannel::CAN1});
   controller.begin();
   std::cout << "Initialized controller." << std::endl;
 
   controller.calibrate_motors(quit);
 
-  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 1.0, 0, 0, -1.0}};
+  MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 1.0, 0, 0, -1.0},
+                                                                          {0, 0, 1.0, 0, 0, -1.0}};
   controller.blocking_move(quit,
                            /*max_speed(rotor deg/s)=*/1000.0,
                            /*position_kp=*/20000.0,

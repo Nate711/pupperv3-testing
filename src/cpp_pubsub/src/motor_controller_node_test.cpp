@@ -29,7 +29,9 @@ int main(int argc, char *argv[]) {
   }
   std::cout << "Joint state publish rate: " << rate << std::endl;
 
-  float position_kp = 10000.0;  // 10000 is good default. units rotor deg/s per output rad
+  // 20000 was on the brink of being too stiff
+  // 10000 was on the soft side and robot would fall backwards often
+  float position_kp = 15000.0;  // 10000 is good default. units rotor deg/s per output rad
   uint8_t speed_kp = 5;       // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;     // rotor deg/s
 

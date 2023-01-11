@@ -136,7 +136,7 @@ class MotorInterface {
       case CANChannel::CAN0:
         return "can0";
       case CANChannel::CAN1:
-        return "can1";
+        return "can2"; // TODO(nathankau) SUPER BAD NEED TO FIX
       case CANChannel::CAN2:
         return "can2";
       case CANChannel::CAN3:

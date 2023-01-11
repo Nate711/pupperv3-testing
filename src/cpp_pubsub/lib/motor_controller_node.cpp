@@ -73,7 +73,7 @@ void MotorControllerNode::startup_thread_fn() {
   motor_controller_.calibrate_motors(stop_);
   MotorController<K_SERVOS_PER_CHANNEL>::ActuatorMatrix<float> command = {{0, 0, 1.0, 0, 0, -1.0},
                                                                           {0, 0, 1.0, 0, 0, -1.0}};
-  motor_controller_.blocking_move(stop_, 750.0, 20000.0, 10, command);
+  motor_controller_.blocking_move(stop_, 750.0, 20000.0, 15, command);
 }
 /*
  * TODO: add velocity, feedforward, kp, kd
@@ -102,29 +102,26 @@ void MotorControllerNode::publish_callback() {
   // TODO: add watchdog
   if (latest_joint_command_.position_target.size() == 0) {
     RCLCPP_WARN(this->get_logger(), "No joint command received. Skipping control");
-    return;
-  }
-
-  if (motor_controller_.is_calibrated()) {
+  } else if (motor_controller_.is_calibrated()) {
     auto motor_position_targets = split_vector(latest_joint_command_.position_target);
     RCLCPP_INFO(this->get_logger(), "Commanding %lu motors on %lu buses.",
                 latest_joint_command_.position_target.size(), motor_position_targets.size());
     motor_controller_.position_control(motor_position_targets);
-
-    RCLCPP_INFO(this->get_logger(), "Publishing joint states");
-    joint_state_message_.header.stamp = now();
-    auto positions = motor_controller_.actuator_positions();
-    auto velocities = motor_controller_.actuator_velocities();
-    auto efforts = motor_controller_.actuator_efforts();
-
-    for (size_t i = 0; i < positions.size() * K_SERVOS_PER_CHANNEL; i++) {
-      int bus_id = i / K_SERVOS_PER_CHANNEL;
-      int motor_id = i % K_SERVOS_PER_CHANNEL;
-      joint_state_message_.position.at(i) = positions.at(bus_id).at(motor_id);
-      joint_state_message_.velocity.at(i) = velocities.at(bus_id).at(motor_id);
-      // TODO: make Nm
-      joint_state_message_.effort.at(i) = efforts.at(bus_id).at(motor_id);
-    }
-    publisher_->publish(joint_state_message_);
   }
+
+  RCLCPP_INFO(this->get_logger(), "Publishing joint states");
+  joint_state_message_.header.stamp = now();
+  auto positions = motor_controller_.actuator_positions();
+  auto velocities = motor_controller_.actuator_velocities();
+  auto efforts = motor_controller_.actuator_efforts();
+
+  for (size_t i = 0; i < positions.size() * K_SERVOS_PER_CHANNEL; i++) {
+    int bus_id = i / K_SERVOS_PER_CHANNEL;
+    int motor_id = i % K_SERVOS_PER_CHANNEL;
+    joint_state_message_.position.at(i) = positions.at(bus_id).at(motor_id);
+    joint_state_message_.velocity.at(i) = velocities.at(bus_id).at(motor_id);
+    // TODO: make Nm
+    joint_state_message_.effort.at(i) = efforts.at(bus_id).at(motor_id);
+  }
+  publisher_->publish(joint_state_message_);
 }

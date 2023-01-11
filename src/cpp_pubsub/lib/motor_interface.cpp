@@ -192,7 +192,7 @@ void MOTOR_INTERFACE::update_rotation(CommonResponse &common) {
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::read_blocking(CANChannel bus) {
   struct can_frame frame = read_canframe_blocking(bus);
-  // std::cout << "Bus: " << channel_str(bus) << " CAN ID: " << frame.can_id << std::endl;
+  std::cout << "Read Bus: " << channel_str(bus) << " CAN ID: " << frame.can_id << std::endl;
   parse_frame(bus, frame);
 }
 
@@ -298,6 +298,7 @@ void MOTOR_INTERFACE::parse_frame(CANChannel bus, const struct can_frame &frame)
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::start_read_threads() {
   for (auto canbus : motor_connections_) {
+    std::cout << "Starting read thread on bus: " << channel_str(canbus) << std::endl;
     read_threads_.push_back(
         std::make_shared<std::thread>(&MOTOR_INTERFACE::read_thread, this, canbus));
   }
