@@ -24,6 +24,8 @@ target_link_libraries(motor_controller_node motor_controller)
 ament_target_dependencies(motor_controller_node rclcpp std_msgs sensor_msgs
                           pupper_interfaces)
 
+add_library(motor_interface_generic lib/motor_interface_generic.cpp)
+
 # Executables
 add_executable(talker src/joint_state_publisher.cpp)
 target_link_libraries(talker motor_interface)
