@@ -4,6 +4,7 @@
 #include "gflags/gflags.h"
 #include "motor_interface_generic.hpp"
 
+DEFINE_bool(verbose_interface, false, "Verbose interface mode");
 DEFINE_bool(verbose, false, "Verbose mode");
 DEFINE_bool(velocity_control, false, "Test velocity control");
 
@@ -16,23 +17,25 @@ void sigint_handler(sig_atomic_t signal) {
   printf("Caught signal %d\n", signal);
 }
 
-void test_command_velocity() {
+void test_command_velocity(bool verbose_interface, bool verbose) {
   MotorID id1{CANChannel::CAN0, 1};
   MotorID id2{CANChannel::CAN0, 2};
   MotorID id3{CANChannel::CAN0, 3};
 
   ActuatorConfiguration actuator_config{{id1, id2, id3}};
-  MotorInterface interface(actuator_config, FLAGS_verbose);
+  MotorInterface interface(actuator_config, verbose_interface);
   interface.initialize_canbuses();
   interface.initialize_motors();
   interface.start_read_threads();
 
   for (int i = 0; i < 500; i++) {
-    interface.command_velocity(id1, 1000);
-    interface.command_velocity(id2, 2000);
-    interface.command_velocity(id3, 4000);
+    interface.command_velocity(id1, 2000);
+    interface.command_velocity(id2, 8000);
+    interface.command_velocity(id3, -10000);
     MotorInterface::ActuatorData data = interface.motor_data_safe();
-    std::cout << data << "\n";
+    if (verbose) {
+      std::cout << data << "\n";
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
     if (quit) {
       break;
@@ -40,11 +43,13 @@ void test_command_velocity() {
   }
 
   for (int i = 0; i < 500; i++) {
-    interface.command_velocity(id1, -1000);
-    interface.command_velocity(id2, -2000);
-    interface.command_velocity(id3, -4000);
+    interface.command_velocity(id1, -2000);
+    interface.command_velocity(id2, -8000);
+    interface.command_velocity(id3, 10000);
     MotorInterface::ActuatorData data = interface.motor_data_safe();
-    std::cout << data << "\n";
+    if (verbose) {
+      std::cout << data << "\n";
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
     if (quit) {
       break;
@@ -69,7 +74,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (FLAGS_velocity_control) {
-    test_command_velocity();
+    test_command_velocity(FLAGS_verbose_interface, FLAGS_verbose);
   }
 
   gflags::ShutDownCommandLineFlags();
