@@ -42,8 +42,6 @@ namespace pupperv3 {
  * The reading threads have to make map calls though to store data (~1ns per lookup?)
  */
 
-static constexpr int kNumCANChannels = 4;
-
 enum class CANChannel {
   CAN0 = 0,
   CAN1 = 1,
@@ -81,9 +79,29 @@ struct CommonResponse {
   float output_rads_per_sec = 0.0;  // rads per sec
 };
 
+inline std::ostream& operator<<(std::ostream& os, const CommonResponse& common) {
+  os << "common: ";
+  os << "ec: " << common.encoder_counts << " ";
+  os << "pec: " << common.previous_encoder_counts << " ";
+  os << "vdeg: " << common.velocity_degs << " ";
+  os << "vrad: " << common.velocity_rads << " ";
+  os << "i: " << common.current << " ";
+  os << "t: " << static_cast<int>(common.temp) << " ";
+  os << "rots: " << common.rotations << " ";
+  os << "mla: " << common.multi_loop_angle << " ";
+  os << "orads: " << common.output_rads << " ";
+  os << "oradspsec: " << common.output_rads_per_sec << " ";
+  return os;
+}
+
 struct MultiLoopAngleResponse {
   float multi_loop_angle = 0.0;  // degs
 };
+
+inline std::ostream& operator<<(std::ostream& os, const MultiLoopAngleResponse& multi_loop) {
+  os << "multi_loop: " << multi_loop.multi_loop_angle;
+  return os;
+}
 
 struct MotorData {
   uint8_t error = 0;
@@ -92,28 +110,36 @@ struct MotorData {
   CommonResponse common;
 };
 
+inline std::ostream& operator<<(std::ostream& os, const MotorData& md) {
+  os << "motor data: "
+     << "err: " << static_cast<int>(md.error) << " mid: " << static_cast<int>(md.motor_id) << " "
+     << md.multi_loop << " " << md.common;
+  return os;
+}
+
+struct MotorID {
+  CANChannel bus;
+  uint8_t motor_id;
+
+  inline bool operator==(const MotorID& other) const {
+    return other.bus == this->bus && other.motor_id == this->motor_id;
+  }
+};
+
+using MotorIndex = int;
+using ActuatorConfiguration = std::vector<MotorID>;
+
 class MotorInterface {
  public:
   // Specify motor configuration like so: [(canbus, id),(canbus, id)...]
   // Build inverse map automatically: map<(canbus, id), index>
-  struct MotorID {
-    CANChannel bus;
-    uint8_t motor_id;
-
-    inline bool operator==(const MotorID& other) const {
-      return other.bus == this->bus && other.motor_id == this->motor_id;
-    }
-  };
-
-  using MotorIndex = int;
-  using ActuatorConfiguration = std::vector<MotorID>;
 
   // Since hashing MotorID requires boost, use vector::find every time to find index
   // using ActuatorConfigurationInverse = std::map<MotorID, MotorIndex>;
 
   using ActuatorData = std::vector<MotorData>;
 
-  explicit MotorInterface(ActuatorConfiguration actuator_config);
+  explicit MotorInterface(ActuatorConfiguration actuator_config, bool verbose = false);
   ~MotorInterface();
   void initialize_canbuses();
   void close_canbuses();
@@ -159,6 +185,9 @@ class MotorInterface {
   static uint8_t can_id_to_motor_id(uint32_t can_id);
   void read_thread(CANChannel channel);
   void send(const MotorID& motor_id, const std::array<uint8_t, 8>& payload);
+
+  // O(N) search for motor given its ID and then return data
+  // O(N) search is probably faster than hashmap at the typical number of motors (12)
   MotorData& motor_data(MotorID motor_id);
   void parse_frame(CANChannel bus, const struct can_frame& frame);
   void multi_angle_update(const MotorID& motor_id, const struct can_frame& frame);
@@ -193,6 +222,8 @@ class MotorInterface {
   // DEBUG ONLY
   std::chrono::system_clock::time_point debug_start_;
 
+  bool verbose_;
+
   static constexpr float kCurrentWriteMax = 32.0;
   static constexpr int kCurrentMultiplier = 2000;
   static constexpr int kCurrentRawReadMax = 2048;
@@ -200,4 +231,13 @@ class MotorInterface {
   static constexpr int kVelocityMultiplier = 100;
   static constexpr int kEncoderCountsPerRot = 65536;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const MotorInterface::ActuatorData& at) {
+  for (const auto& datum : at) {
+    os << datum << "\n";
+  }
+  os << "\n";
+  return os;
+}
+
 }  // namespace pupperv3

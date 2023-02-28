@@ -27,8 +27,11 @@ namespace pupperv3 {
 
 #define DEG_TO_RAD 0.01745329252
 
-MotorInterface::MotorInterface(ActuatorConfiguration actuator_config)
-    : actuator_config_(actuator_config), initialized_(false), should_read_(true) {
+MotorInterface::MotorInterface(ActuatorConfiguration actuator_config, bool verbose)
+    : actuator_config_(actuator_config),
+      initialized_(false),
+      should_read_(true),
+      verbose_(verbose) {
   // DEBUG ONLY
   debug_start_ = time_now();
   for (auto const &motor_id : actuator_config) {
@@ -164,7 +167,9 @@ void MotorInterface::update_rotation(CommonResponse &common) {
 
 void MotorInterface::read_blocking(CANChannel bus) {
   struct can_frame frame = read_canframe_blocking(bus);
-  std::cout << "Read Bus: " << to_string(bus) << " CAN ID: " << frame.can_id << std::endl;
+  if (verbose_) {
+    std::cout << "Read Bus: " << to_string(bus) << " CAN ID: " << frame.can_id << "\n";
+  }
   parse_frame(bus, frame);
 }
 
@@ -237,14 +242,15 @@ void MotorInterface::torque_velocity_update(const MotorID &motor_id,
   // TODO: Implement per-motor mutex
   {
     std::unique_lock<std::mutex> lock(latest_data_lock_);
-    CommonResponse &common = motor_data(motor_id).common;
-    common.temp = temp_raw;
-    common.current = static_cast<float>(current_raw) * kCurrentReadMax / kCurrentRawReadMax;
-    common.velocity_degs = speed_raw;
-    common.velocity_rads = common.velocity_degs * DEG_TO_RAD;
-    common.output_rads_per_sec = common.velocity_rads * kSpeedReduction;
-    common.encoder_counts = encoder_counts;
-    update_rotation(common);
+    auto &data = motor_data(motor_id);
+    data.motor_id = motor_id.motor_id;
+    data.common.temp = temp_raw;
+    data.common.current = static_cast<float>(current_raw) * kCurrentReadMax / kCurrentRawReadMax;
+    data.common.velocity_degs = speed_raw;
+    data.common.velocity_rads = data.common.velocity_degs * DEG_TO_RAD;
+    data.common.output_rads_per_sec = data.common.velocity_rads * kSpeedReduction;
+    data.common.encoder_counts = encoder_counts;
+    update_rotation(data.common);
   }
 }
 
@@ -252,7 +258,7 @@ void MotorInterface::parse_frame(CANChannel bus, const struct can_frame &frame) 
   MotorID motor_id;
   motor_id.bus = bus;
   motor_id.motor_id = can_id_to_motor_id(frame.can_id);
-  if (motor_id.motor_id <= 0 || motor_id.motor_id > actuator_config_.size()) {
+  if (motor_id.motor_id <= 0) {
     std::cout << "Invalid motor id: " << motor_id.motor_id << '\n';
     return;
   }
@@ -309,7 +315,7 @@ void MotorInterface::initialize_bus(CANChannel bus) {
 }
 
 void MotorInterface::initialize_motor(const MotorID &motor_id) {
-  std::cout << "Initializing motor id: " << motor_id.motor_id;
+  std::cout << "Initializing motor id: " << static_cast<int>(motor_id.motor_id);
   std::cout << " on channel: " << to_string(motor_id.bus) << std::endl;
 
   send(motor_id, {kStartup0, 0, 0, 0, 0, 0, 0, 0});

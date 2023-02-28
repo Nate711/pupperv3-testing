@@ -16,6 +16,8 @@ find_package(pupper_interfaces REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/lib)
 add_library(motor_interface lib/motor_interface.cpp)
 
+add_library(pupperv3 lib/motor_interface_generic.cpp)
+
 add_library(motor_controller lib/motor_controller.cpp)
 target_link_libraries(motor_controller motor_interface)
 
@@ -27,6 +29,9 @@ ament_target_dependencies(motor_controller_node rclcpp std_msgs sensor_msgs
 add_library(motor_interface_generic lib/motor_interface_generic.cpp)
 
 # Executables
+add_executable(interface_test src/interface_test.cpp)
+target_link_libraries(interface_test pupperv3 gflags)
+
 add_executable(talker src/joint_state_publisher.cpp)
 target_link_libraries(talker motor_interface)
 ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
@@ -56,6 +61,7 @@ install(TARGETS motor_controller_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_node_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS my_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS calibration_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS interface_test DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
