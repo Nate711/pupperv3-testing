@@ -177,6 +177,8 @@ class MotorInterface {
   static const uint8_t kDefaultIqKp = 0x3C;
   static const uint8_t kDefaultIqKi = 0x28;
 
+  inline const ActuatorConfiguration& actuator_config() { return actuator_config_; }
+
  private:
   void initialize_bus(CANChannel bus);
   void initialize_motor(const MotorID& motor_id);
