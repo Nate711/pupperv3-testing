@@ -262,7 +262,7 @@ void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, flo
   ActuatorVector actuator_vels = ActuatorVector::Zero();
   int ticks = 0;
   while (!should_stop &&
-         !((actuator_vels.lpNorm<Eigen::Infinity>() < speed_tolerance) && (ticks > wait_ticks))) {
+         !((actuator_vels.template lpNorm<Eigen::Infinity>() < speed_tolerance) && (ticks > wait_ticks))) {
     position_control(goal_position, position_kp, max_speed, true);
 
     auto motor_data = motor_interface_->motor_data_safe();
