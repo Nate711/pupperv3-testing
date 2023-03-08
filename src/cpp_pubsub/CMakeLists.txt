@@ -12,13 +12,13 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pupper_interfaces REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 # Libraries
 include_directories(${CMAKE_SOURCE_DIR}/lib)
-add_library(motor_interface lib/motor_interface.cpp lib/motor_controller_generic.cpp)
-target_link_libraries(motor_interface Eigen3::Eigen)
+add_library(motor_interface lib/motor_interface.cpp)
 
-add_library(pupperv3 lib/motor_interface_generic.cpp)
+add_library(pupperv3 lib/motor_interface_generic.cpp lib/motor_controller_generic.cpp)
 
 add_library(motor_controller lib/motor_controller.cpp)
 target_link_libraries(motor_controller motor_interface)
@@ -28,11 +28,12 @@ target_link_libraries(motor_controller_node motor_controller)
 ament_target_dependencies(motor_controller_node rclcpp std_msgs sensor_msgs
                           pupper_interfaces)
 
-add_library(motor_interface_generic lib/motor_interface_generic.cpp)
-
 # Executables
 add_executable(interface_test src/interface_test.cpp)
 target_link_libraries(interface_test pupperv3 gflags)
+
+add_executable(motor_controller_generic_calibration_test src/motor_controller_generic_calibration_test.cpp)
+target_link_libraries(motor_controller_generic_calibration_test pupperv3 gflags)
 
 add_executable(talker src/joint_state_publisher.cpp)
 target_link_libraries(talker motor_interface)
