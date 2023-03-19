@@ -21,7 +21,8 @@ class MotorController {
   using ActuatorVectorI = Eigen::Matrix<int, N, 1>;
 
   MotorController(float position_kp, uint8_t speed_kp, float max_speed,
-                  ActuatorVector endstop_positions_degs, ActuatorVector calibration_directions,
+                  const ActuatorVector &endstop_positions_degs,
+                  const ActuatorVector &calibration_directions,
                   std::unique_ptr<MotorInterface> motor_interface);
   ~MotorController();
   void begin();
@@ -66,9 +67,9 @@ class MotorController {
  private:
   static float raw_to_calibrated(float val, float measured_endstop_position,
                                  float endstop_position);
-  static ActuatorVector raw_to_calibrated(ActuatorVector val,
-                                          ActuatorVector measured_endstop_position,
-                                          ActuatorVector endstop_position);
+  static ActuatorVector raw_to_calibrated(const ActuatorVector &val,
+                                          const ActuatorVector &measured_endstop_position,
+                                          const ActuatorVector &endstop_position);
 
   void throw_on_not_calibrated(const std::string &msg);
   inline void set_busy() { busy_ = true; }

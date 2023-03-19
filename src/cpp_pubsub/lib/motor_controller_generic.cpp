@@ -8,8 +8,8 @@ namespace pupperv3 {
 
 template <int N>
 MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float max_speed,
-                                    ActuatorVector endstop_positions_degs,
-                                    ActuatorVector calibration_directions,
+                                    const ActuatorVector &endstop_positions_degs,
+                                    const ActuatorVector &calibration_directions,
                                     std::unique_ptr<MotorInterface> motor_interface)
     : motor_interface_(std::move(motor_interface)),
       position_kp_(position_kp),
@@ -19,7 +19,7 @@ MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float m
       is_robot_calibrated_(false),
       busy_(false) {
   if (motor_interface->actuator_config().size() != N) {
-    // Janky, should let stuff go out of scope instead
+    // Exceptions call object destructors except if thrown in constructor
     motor_interface_.reset();
     throw std::runtime_error(
         "Number of actuators in motor interface does not match N for motor controller");
@@ -32,6 +32,7 @@ template <int N>
 MotorController<N>::~MotorController() {
   std::cout << "Motor controller destructor called" << std::endl;
 }
+
 template <int N>
 void MotorController<N>::begin() {
   std::cout << "Initializing motor controller." << std::endl;
@@ -40,10 +41,10 @@ void MotorController<N>::begin() {
   motor_interface_->start_read_threads();
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
-  for (const auto &motor_id : motor_interface_->actuator_config()) {
-    motor_interface_->command_velocity(motor_id, 0.0);
-  }
+
+  velocity_control(ActuatorVector::Zero());
 }
+
 template <int N>
 void MotorController<N>::stop() {
   motor_interface_->command_all_stop();
@@ -64,8 +65,8 @@ float MotorController<N>::raw_to_calibrated(float value, float measured_endstop_
 
 template <int N>
 typename MotorController<N>::ActuatorVector MotorController<N>::raw_to_calibrated(
-    ActuatorVector value, ActuatorVector measured_endstop_position,
-    ActuatorVector endstop_position) {
+    const ActuatorVector &value, const ActuatorVector &measured_endstop_position,
+    const ActuatorVector &endstop_position) {
   return value - measured_endstop_position + endstop_position;
 }
 
@@ -124,15 +125,14 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   ActuatorVector corrected_actuator_positions = actuator_positions();
   ActuatorVector position_error = goal_positions - corrected_actuator_positions;
   ActuatorVector velocity_command = position_error * position_kp;  // in rotor deg/s
-  // Clip velocity commands
+
+  // Clip velocity commands (unncessary except for printing bc do it in velocity_control)
   velocity_command = velocity_command.cwiseMax(max_speed).cwiseMin(-max_speed);
+
   std::cout << "p*: " << goal_positions << " cp: " << corrected_actuator_positions
             << " rp: " << raw_actuator_positions() << "\n";
 
-  for (size_t i = 0; i < N; i++) {
-    motor_interface_->command_velocity(motor_interface_->actuator_config().at(i),
-                                       velocity_command(i));
-  }
+  velocity_control(velocity_command);
 }
 
 /* Command velocity
@@ -146,24 +146,17 @@ void MotorController<N>::velocity_control(const ActuatorVector &vel_targets) {
     std::cout << "Ignoring velocity_control call because robot is busy" << std::endl;
     return;
   }
-  throw_on_not_calibrated("velocity_control: robot not calibrated");
 
+  // sometimes need to call this function while not calibrated eg calibration and before
+  // calibration? throw_on_not_calibrated("velocity_control: robot not calibrated");
+
+  ActuatorVector clamped_velocity_command =
+      velocity_command.cwiseMax(max_speed).cwiseMin(-max_speed);
   for (size_t i = 0; i < N; i++) {
-    float velocity_command = vel_targets(i);
-    velocity_command = std::clamp(velocity_command, -max_speed_, max_speed_);
+    float velocity_command = clamped_velocity_command(i);
     motor_interface_->command_velocity(motor_interface_->actuator_config().at(i), velocity_command);
   }
 }
-
-//
-// typename MOTOR_CONTROLLER::RobotMotorData MOTOR_CONTROLLER::motor_data_safe() {
-//   return motor_interface_->motor_data_safe();
-// }
-
-//
-// MotorData MOTOR_CONTROLLER::motor_data_safe(CANChannel bus, uint8_t motor_id) {
-//   return motor_interface_->motor_data_safe(bus, motor_id);
-// }
 
 template <int N>
 bool MotorController<N>::is_calibrated() {
@@ -204,16 +197,14 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
   // loops_at_endstop.at(4 + 6) = 100;
 
   while (!should_stop && !(loops_at_endstop.minCoeff() >= calibration_threshold)) {
+    // Command motors
+    velocity_control(command_velocities);
+
     // Get latest data from motors in thread-safe way
     auto motor_data = motor_interface_->motor_data_safe();
 
     // Iterate over each motor
     for (size_t idx = 0; idx < N; idx++) {
-      // Send velocity command
-      float command_velocity = command_velocities(idx);
-      motor_interface_->command_velocity(motor_interface_->actuator_config().at(idx),
-                                         command_velocity);
-
       // Read data
       float output_rads = motor_data.at(idx).common.output_rads;
       float output_rad_per_sec = motor_data.at(idx).common.output_rads_per_sec;
@@ -281,10 +272,11 @@ void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, flo
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
   std::this_thread::sleep_for(1000us);
-  for (const auto &motor_id : motor_interface_->actuator_config()) {
-    motor_interface_->command_velocity(motor_id, 0.0);
-  }
 
+  // Set motors back to zero velocity
+  velocity_control(ActuatorVector::Zero());
+
+  // Unblock robot controller
   set_available();
   std::cout << "--------------- Finished blocking move-----------" << std::endl;
 }
