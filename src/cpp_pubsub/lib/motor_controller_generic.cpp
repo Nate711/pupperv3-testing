@@ -129,8 +129,10 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   // Clip velocity commands (unncessary except for printing bc do it in velocity_control)
   velocity_command = velocity_command.cwiseMax(-max_speed).cwiseMin(max_speed);
 
-  std::cout << "p*: " << goal_positions << " cp: " << corrected_actuator_positions
-            << " rp: " << raw_actuator_positions() << "\n";
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+  std::cout << "pos ref: " << goal_positions.transpose().format(CleanFmt)
+            << " corrected pos: " << corrected_actuator_positions.transpose().format(CleanFmt)
+            << " raw pos: " << raw_actuator_positions().transpose().format(CleanFmt) << "\n";
 
   velocity_control(velocity_command, override_busy);
 }
