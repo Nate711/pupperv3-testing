@@ -18,7 +18,7 @@ MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float m
       calibration_directions_(calibration_directions),
       is_robot_calibrated_(false),
       busy_(false) {
-  if (motor_interface->actuator_config().size() != N) {
+  if (motor_interface_->actuator_config().size() != N) {
     // Exceptions call object destructors except if thrown in constructor
     motor_interface_.reset();
     throw std::runtime_error(
@@ -36,7 +36,7 @@ MotorController<N>::~MotorController() {
 template <int N>
 void MotorController<N>::begin() {
   std::cout << "Initializing motor controller." << std::endl;
-  motor_interface_->initialize_canbuses();
+  // motor_interface_->initialize_canbuses();
   motor_interface_->initialize_motors();
   motor_interface_->start_read_threads();
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
@@ -127,7 +127,7 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   ActuatorVector velocity_command = position_error * position_kp;  // in rotor deg/s
 
   // Clip velocity commands (unncessary except for printing bc do it in velocity_control)
-  velocity_command = velocity_command.cwiseMax(max_speed).cwiseMin(-max_speed);
+  velocity_command = velocity_command.cwiseMax(-max_speed).cwiseMin(max_speed);
 
   std::cout << "p*: " << goal_positions << " cp: " << corrected_actuator_positions
             << " rp: " << raw_actuator_positions() << "\n";
@@ -141,7 +141,7 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
  *  vel_targets: rotor deg/s
  */
 template <int N>
-void MotorController<N>::velocity_control(const ActuatorVector &vel_targets) {
+void MotorController<N>::velocity_control(const ActuatorVector &velocity_command) {
   if (is_busy()) {
     std::cout << "Ignoring velocity_control call because robot is busy" << std::endl;
     return;
@@ -151,10 +151,10 @@ void MotorController<N>::velocity_control(const ActuatorVector &vel_targets) {
   // calibration? throw_on_not_calibrated("velocity_control: robot not calibrated");
 
   ActuatorVector clamped_velocity_command =
-      velocity_command.cwiseMax(max_speed).cwiseMin(-max_speed);
+      velocity_command.cwiseMax(-max_speed_).cwiseMin(max_speed_);
   for (size_t i = 0; i < N; i++) {
-    float velocity_command = clamped_velocity_command(i);
-    motor_interface_->command_velocity(motor_interface_->actuator_config().at(i), velocity_command);
+    motor_interface_->command_velocity(motor_interface_->actuator_config().at(i),
+                                       clamped_velocity_command(i));
   }
 }
 
@@ -198,6 +198,7 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
 
   while (!should_stop && !(loops_at_endstop.minCoeff() >= calibration_threshold)) {
     // Command motors
+    std::cout << command_velocities << "\n";
     velocity_control(command_velocities);
 
     // Get latest data from motors in thread-safe way
@@ -226,7 +227,7 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
 
       // Debug printing
       std::cout << " || v: " << output_rad_per_sec << " I: " << current
-                << " ticks: " << loops_at_endstop(idx);
+                << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
     }
 
     std::cout << std::endl;
@@ -283,7 +284,7 @@ void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, flo
 
 // template class MotorController<1>;
 // template class MotorController<2>;
-// template class MotorController<3>;
+template class MotorController<3>;
 // template class MotorController<4>;
 // template class MotorController<5>;
 template class MotorController<6>;
