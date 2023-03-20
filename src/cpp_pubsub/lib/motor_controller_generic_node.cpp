@@ -94,28 +94,33 @@ template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::publish_callback() {
   // Must receive a joint command message to make latest_joint_command_ non-zero
   // TODO: add watchdog
-  // if (latest_joint_command_.position_target.size() == 0) {
-  //   RCLCPP_WARN(this->get_logger(), "No joint command received. Skipping control");
-  // } else if (motor_controller_->is_calibrated()) {
-  //   auto motor_position_targets = split_vector(latest_joint_command_.position_target);
-  //   RCLCPP_INFO(this->get_logger(), "Commanding %lu motors on %lu buses.",
-  //               latest_joint_command_.position_target.size(), motor_position_targets.size());
-  //   motor_controller_->position_control(motor_position_targets);
-  // }
+  if (latest_joint_command_.position_target.size() == 0) {
+    RCLCPP_WARN(this->get_logger(), "No joint command received. Skipping control");
+  } else if (latest_joint_command_.position_target.size() != K_SERVOS) {
+    RCLCPP_WARN(this->get_logger(), "Joint command vector size != K_SERVOS");
+  } else if (motor_controller_->is_calibrated()) {
+    ActuatorVector motor_position_targets;
+    for (int i = 0; i < latest_joint_command_.position_target.size(); i++) {
+      motor_position_targets(i) = latest_joint_command_.position_target[i];
+    }
+    motor_controller_->position_control(motor_position_targets);
+  } else {
+    RCLCPP_WARN(this->get_logger(), "Motor controller not calibrated");
+  }
 
-  // RCLCPP_INFO(this->get_logger(), "Publishing joint states");
-  // joint_state_message_.header.stamp = now();
-  // auto positions = motor_controller_->actuator_positions();
-  // auto velocities = motor_controller_->actuator_velocities();
-  // auto efforts = motor_controller_->actuator_efforts();
+  RCLCPP_INFO(this->get_logger(), "Publishing joint states");
+  joint_state_message_.header.stamp = now();
+  auto positions = motor_controller_->actuator_positions();
+  auto velocities = motor_controller_->actuator_velocities();
+  auto efforts = motor_controller_->actuator_efforts();
 
-  // for (size_t i = 0; i < positions.size() * K_SERVOS; i++) {
-  //   joint_state_message_.position.at(i) = positions(i);
-  //   joint_state_message_.velocity.at(i) = velocities(i);
-  //   // TODO: make Nm
-  //   joint_state_message_.effort.at(i) = efforts(i);
-  // }
-  // publisher_->publish(joint_state_message_);
+  for (int i = 0; i < positions.size(); i++) {
+    joint_state_message_.position.at(i) = positions(i);
+    joint_state_message_.velocity.at(i) = velocities(i);
+    // TODO: make Nm
+    joint_state_message_.effort.at(i) = efforts(i);
+  }
+  publisher_->publish(joint_state_message_);
 }
 template class MotorControllerNode<3>;
 template class MotorControllerNode<6>;
