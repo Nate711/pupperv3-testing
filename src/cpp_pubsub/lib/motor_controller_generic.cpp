@@ -139,8 +139,11 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
 
 /* Command velocity
  *
+ * TODO(nathankau): Bug if multiple blocking_move() are called from different threads
+ *
  * Args:
  *  vel_targets: rotor deg/s
+ *  override_busy: set true to command velocity even when controller thinks robot is busy
  */
 template <int N>
 void MotorController<N>::velocity_control(const ActuatorVector &velocity_command,
