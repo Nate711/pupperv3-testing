@@ -7,7 +7,7 @@
 
 using namespace std::chrono_literals;
 
-#define N_ACTUATORS 12
+#define N_ACTUATORS 3
 #define PRINT_CYCLE 1
 
 std::atomic<bool> quit(false);  // signal flag
@@ -33,9 +33,11 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<pupperv3::MotorInterface> interface =
       std::make_unique<pupperv3::MotorInterface>(actuator_config);
 
-  ActuatorVector endstop_positions_degs = {-135, 90, 68, 135, -90, -68,
-                                           -135, 90, 68, 135, -90, -68};
-  ActuatorVector calibration_directions = {-1, 1, 1, 1, -1, -1, -1, 1, 1, 1, -1, -1};
+  // ActuatorVector endstop_positions_degs = {-135, 90, 68, 135, -90, -68,
+  //                                          -135, 90, 68, 135, -90, -68};
+  ActuatorVector endstop_positions_degs = {-135, 90, 68};
+  // ActuatorVector calibration_directions = {-1, 1, 1, 1, -1, -1, -1, 1, 1, 1, -1, -1};
+  ActuatorVector calibration_directions = {-1, 1, 1};
 
   // Create position controller
   pupperv3::MotorController<N_ACTUATORS> controller(
@@ -50,7 +52,8 @@ int main(int argc, char *argv[]) {
 
   controller.calibrate_motors(quit);
 
-  ActuatorVector command = {0, 0, 1.0, 0, 0, -1.0, 0, 0, 1.0, 0, 0, -1.0};
+  // ActuatorVector command = {0, 0, 1.0, 0, 0, -1.0, 0, 0, 1.0, 0, 0, -1.0};
+  ActuatorVector command = {0, 0, 1.0};
   controller.blocking_move(quit,
                            /*max_speed(rotor deg/s)=*/1000.0,
                            /*position_kp=*/20000.0,
