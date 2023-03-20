@@ -42,7 +42,7 @@ void MotorController<N>::begin() {
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
 
-  velocity_control(ActuatorVector::Zero());
+  velocity_control(ActuatorVector::Zero(), true);
 }
 
 template <int N>
@@ -132,7 +132,7 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   std::cout << "p*: " << goal_positions << " cp: " << corrected_actuator_positions
             << " rp: " << raw_actuator_positions() << "\n";
 
-  velocity_control(velocity_command);
+  velocity_control(velocity_command, override_busy);
 }
 
 /* Command velocity
@@ -141,8 +141,9 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
  *  vel_targets: rotor deg/s
  */
 template <int N>
-void MotorController<N>::velocity_control(const ActuatorVector &velocity_command) {
-  if (is_busy()) {
+void MotorController<N>::velocity_control(const ActuatorVector &velocity_command,
+                                          bool override_busy) {
+  if (is_busy() && !override_busy) {
     std::cout << "Ignoring velocity_control call because robot is busy" << std::endl;
     return;
   }
@@ -198,7 +199,7 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
 
   while (!should_stop && !(loops_at_endstop.minCoeff() >= calibration_threshold)) {
     // Command motors
-    velocity_control(command_velocities);
+    velocity_control(command_velocities, true);
 
     // Get latest data from motors in thread-safe way
     auto motor_data = motor_interface_->motor_data_safe();
@@ -239,7 +240,7 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
                                          MotorInterface::kDefaultIqKi);
 
   // Set motors to zero velocity
-  velocity_control(ActuatorVector::Zero());
+  velocity_control(ActuatorVector::Zero(), true);
 
   std::cout << "------------ FINISHED CALIBRATION ----------" << std::endl;
 }
@@ -279,7 +280,7 @@ void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, flo
   std::this_thread::sleep_for(1000us);
 
   // Set motors back to zero velocity
-  velocity_control(ActuatorVector::Zero());
+  velocity_control(ActuatorVector::Zero(), true);
 
   // Unblock robot controller
   set_available();

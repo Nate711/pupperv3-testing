@@ -33,7 +33,7 @@ class MotorController {
                         bool override_busy);
 
   // WARNING: UNTESTED
-  void velocity_control(const ActuatorVector &vel_targets);
+  void velocity_control(const ActuatorVector &vel_targets, bool override_busy = false);
 
   // MotorData motor_data_safe(CANChannel bus, uint8_t motor_id);
 
