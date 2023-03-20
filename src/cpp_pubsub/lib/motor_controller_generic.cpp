@@ -233,8 +233,13 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
     std::this_thread::sleep_for(sleep_time);
   }
   is_robot_calibrated_ = true;
+
+  // Reset PID gains
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
+
+  // Set motors to zero velocity
+  velocity_control(ActuatorVector::Zero());
 
   std::cout << "------------ FINISHED CALIBRATION ----------" << std::endl;
 }
