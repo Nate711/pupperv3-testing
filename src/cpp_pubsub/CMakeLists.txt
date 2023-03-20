@@ -47,6 +47,10 @@ ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
 add_executable(motor_controller_node_test src/motor_controller_node_test.cpp)
 target_link_libraries(motor_controller_node_test motor_controller_node)
 
+add_executable(motor_controller_generic_node_test src/motor_controller_generic_node_test.cpp lib/motor_controller_generic_node.cpp)
+target_link_libraries(motor_controller_generic_node_test pupperv3)
+ament_target_dependencies(motor_controller_generic_node_test rclcpp pupper_interfaces std_msgs sensor_msgs)
+
 add_executable(can_test src/can_test.cpp)
 target_link_libraries(can_test motor_interface)
 
@@ -67,6 +71,7 @@ install(TARGETS can_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS pd_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_node_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS motor_controller_generic_node_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS my_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS calibration_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS interface_test DESTINATION lib/${PROJECT_NAME})

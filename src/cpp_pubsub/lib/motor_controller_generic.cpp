@@ -198,7 +198,6 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
 
   while (!should_stop && !(loops_at_endstop.minCoeff() >= calibration_threshold)) {
     // Command motors
-    std::cout << command_velocities << "\n";
     velocity_control(command_velocities);
 
     // Get latest data from motors in thread-safe way
