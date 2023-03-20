@@ -38,6 +38,7 @@ MotorInterface::MotorInterface(ActuatorConfiguration actuator_config, bool verbo
     latest_data_.emplace_back();
     canbuses_.insert(motor_id.bus);
   }
+  initialize_canbuses();
 }
 
 MotorInterface::~MotorInterface() {
@@ -288,6 +289,7 @@ void MotorInterface::initialize_bus(CANChannel bus) {
   std::cout << "Initializing " << to_string(bus) << "." << std::endl;
   if ((socket_id = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
     std::cerr << "socket\n";
+    throw std::runtime_error("could not construct can socket object");
   }
 
   // find interface index
@@ -295,6 +297,7 @@ void MotorInterface::initialize_bus(CANChannel bus) {
   ifr.ifr_ifindex = static_cast<int>(if_nametoindex(ifr.ifr_name));
   if (ifr.ifr_ifindex == 0) {
     std::cerr << "if_nametoindex\n";
+    throw std::invalid_argument("could not find can bus");
   }
   memset(&addr, 0, sizeof(addr));
   addr.can_family = AF_CAN;
@@ -304,6 +307,7 @@ void MotorInterface::initialize_bus(CANChannel bus) {
   // bind socket
   if (bind(socket_id, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
     std::cerr << "bind\n";
+    throw std::runtime_error("could nto bind");
   }
   canbus_to_fd_.insert({bus, socket_id});
 
