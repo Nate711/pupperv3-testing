@@ -25,11 +25,11 @@ constexpr int K_SERVOS = 3;
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
-  float rate = 500;
+  float publish_rate = 500;
   if (argc > 1) {
-    rate = std::stof(argv[1]);
+    publish_rate = std::stof(argv[1]);
   }
-  std::cout << "Joint state publish rate: " << rate << std::endl;
+  std::cout << "Joint state publish_rate: " << publish_rate << std::endl;
 
   // Create config
   pupperv3::MotorID id1{pupperv3::CANChannel::CAN0, 1};
@@ -51,8 +51,8 @@ int main(int argc, char *argv[]) {
   auto controller = std::make_unique<pupperv3::MotorController<K_SERVOS>>(
       position_kp, speed_kp, max_speed, endstop_positions_degs, calibration_directions,
       std::move(interface));
-  auto node =
-      std::make_shared<pupperv3::MotorControllerNode<K_SERVOS>>(rate, std::move(controller));
+  auto node = std::make_shared<pupperv3::MotorControllerNode<K_SERVOS>>(publish_rate,
+                                                                        std::move(controller));
 
   node->startup();
   rclcpp::spin(node);
