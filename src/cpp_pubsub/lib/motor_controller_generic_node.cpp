@@ -34,16 +34,18 @@ namespace pupperv3 {
 
 template <int K_SERVOS>
 MotorControllerNode<K_SERVOS>::MotorControllerNode(
-    float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller)
+    float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller,
+    const std::array<std::string, K_SERVOS>& joint_names, const ActuatorVector& default_position)
     : Node("motor_controller_node"),
       publish_rate_(rate),
-      motor_controller_(std::move(motor_controller)) {
+      motor_controller_(std::move(motor_controller)),
+      default_position_(default_position) {
   // CAN interface setup
   motor_controller_->begin();
   std::cout << "Initialized motor controller." << std::endl;
 
   // Joint State joint_state_message_ setup
-  for (std::string joint_name : joint_names_) {
+  for (std::string joint_name : joint_names) {
     joint_state_message_.name.push_back(joint_name);
     joint_state_message_.position.push_back(0.0);
     joint_state_message_.velocity.push_back(0.0);
@@ -78,7 +80,7 @@ template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
   motor_controller_->calibrate_motors(stop_);
   // ActuatorVector command = {0, 0, 1.0}; // hard coding 3 is bad
-  // motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, command);
+  motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, default_position_);
 }
 /*
  * TODO: add velocity, feedforward, kp, kd
@@ -113,6 +115,9 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
   auto positions = motor_controller_->actuator_positions();
   auto velocities = motor_controller_->actuator_velocities();
   auto efforts = motor_controller_->actuator_efforts();
+
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+  std::cout << "pos ref: " << positions.transpose().format(CleanFmt) << "\n";
 
   for (int i = 0; i < positions.size(); i++) {
     joint_state_message_.position.at(i) = positions(i);

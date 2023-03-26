@@ -35,7 +35,9 @@ template <int K_SERVOS>
 class MotorControllerNode : public rclcpp::Node {
  public:
   using ActuatorVector = typename MotorController<K_SERVOS>::ActuatorVector;
-  MotorControllerNode(float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller);
+  MotorControllerNode(float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller,
+                      const std::array<std::string, K_SERVOS>& joint_names,
+                      const ActuatorVector& default_position);
   ~MotorControllerNode();
   void startup();
 
@@ -48,16 +50,18 @@ class MotorControllerNode : public rclcpp::Node {
   sensor_msgs::msg::JointState joint_state_message_;
   void joint_command_callback(pupper_interfaces::msg::JointCommand joint_command);
 
+  // TODO: make parameter
   //   const std::string joint_names_[12] = {
   //       "leg_front_r_1", "leg_front_r_2", "leg_front_r_3", "leg_front_l_1",
   //       "leg_front_l_2", "leg_front_l_3", "leg_back_r_1",  "leg_back_r_2",
   //       "leg_back_r_3",  "leg_back_l_1",  "leg_back_l_2",  "leg_back_l_3",
   //   };
-  //   const std::string joint_names_[6] = {"leg_front_r_1", "leg_front_r_2", "leg_front_r_3",
-  //                                        "leg_front_l_1", "leg_front_l_2", "leg_front_l_3"};
-  const std::string joint_names_[3] = {"leg_front_r_1", "leg_front_r_2", "leg_front_r_3"};
+  // const std::string joint_names_[K_SERVOS] = {"leg_front_r_1", "leg_front_r_2", "leg_front_r_3",
+  //                                             "leg_front_l_1", "leg_front_l_2", "leg_front_l_3"};
+  // const std::string joint_names_[K_SERVOS] = {"leg_front_r_1", "leg_front_r_2", "leg_front_r_3"};
   float publish_rate_;
   std::unique_ptr<MotorController<K_SERVOS>> motor_controller_;
+  ActuatorVector default_position_;
   pupper_interfaces::msg::JointCommand latest_joint_command_;
   std::thread calibration_thread_;
   std::atomic<bool> stop_;
