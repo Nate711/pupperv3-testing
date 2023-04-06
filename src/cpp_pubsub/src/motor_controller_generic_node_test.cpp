@@ -25,7 +25,7 @@ constexpr int K_SERVOS = 12;
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
-  float publish_rate = 500;
+  float publish_rate = 250;
   if (argc > 1) {
     publish_rate = std::stof(argv[1]);
   }
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
   // 20000 was on the brink of being too stiff
   // 10000 was on the soft side and robot would fall backwards often
-  float position_kp = 15000.0;  // 10000 is good default. units rotor deg/s per output rad
+  float position_kp = 15000.0;  // 15000 is good default. units rotor deg/s per output rad
   uint8_t speed_kp = 5;         // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;       // rotor deg/s
   using ActuatorVector = pupperv3::MotorController<K_SERVOS>::ActuatorVector;
@@ -70,8 +70,8 @@ int main(int argc, char *argv[]) {
   //                                                  "leg_front_l_2", "leg_front_l_3"};
   std::array<std::string, K_SERVOS> joint_names = {
       "leg_front_r_1", "leg_front_r_2", "leg_front_r_3", "leg_front_l_1",
-      "leg_front_l_2", "leg_front_l_3", "leg_rear_r_1",  "leg_rear_r_2",
-      "leg_rear_r_3",  "leg_rear_l_1",  "leg_rear_l_2",  "leg_rear_l_3"};
+      "leg_front_l_2", "leg_front_l_3", "leg_back_r_1",  "leg_back_r_2",
+      "leg_back_r_3",  "leg_back_l_1",  "leg_back_l_2",  "leg_back_l_3"};
 
   ActuatorVector default_position = {0, 0, 1.0, 0, 0, -1.0, 0, 0, 1.0, 0, 0, -1.0};
 
