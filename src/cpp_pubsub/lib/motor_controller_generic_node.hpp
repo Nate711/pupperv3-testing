@@ -49,7 +49,7 @@ class MotorControllerNode : public rclcpp::Node {
   std::unique_ptr<MotorController<K_SERVOS>> motor_controller_;
   ActuatorVector default_position_;
   pupper_interfaces::msg::JointCommand latest_joint_command_;
-  std::thread calibration_thread_;
+  std::thread startup_thread_;
   std::atomic<bool> stop_;
 };
 }  // namespace pupperv3

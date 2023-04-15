@@ -28,10 +28,11 @@ MotorControllerNode<K_SERVOS>::MotorControllerNode(
     : Node("motor_controller_node"),
       publish_rate_(rate),
       motor_controller_(std::move(motor_controller)),
-      default_position_(default_position) {
+      default_position_(default_position),
+      stop_(false) {
   // CAN interface setup
   motor_controller_->begin();
-  SPDLOG_INFO("Initialized motor controller.");
+  SPDLOG_INFO("Began motor controller.");
 
   // Joint State joint_state_message_ setup
   for (std::string joint_name : joint_names) {
@@ -54,20 +55,20 @@ MotorControllerNode<K_SERVOS>::MotorControllerNode(
 template <int K_SERVOS>
 MotorControllerNode<K_SERVOS>::~MotorControllerNode() {
   SPDLOG_INFO("Destroying motor controller node...");
-  calibration_thread_.join();
-  SPDLOG_INFO("Finished destroying motor controller.");
+  stop_ = true;
+  startup_thread_.join();
+  SPDLOG_INFO("Finished motor controller node destructor. Destroying members...");
 }
 
 template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::startup() {
-  RCLCPP_INFO(this->get_logger(), "Beginning startup thread");
-  calibration_thread_ = std::thread([this]() { this->startup_thread_fn(); });
+  RCLCPP_INFO(this->get_logger(), "Beginning startup thread..");
+  startup_thread_ = std::thread([this]() { this->startup_thread_fn(); });
 }
 
 template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
   motor_controller_->calibrate_motors(stop_);
-  // ActuatorVector command = {0, 0, 1.0}; // hard coding 3 is bad
   motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, default_position_);
 }
 /*

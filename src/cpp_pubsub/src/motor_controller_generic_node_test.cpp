@@ -8,6 +8,7 @@
 #include "motor_controller_generic_node.hpp"
 
 constexpr int K_SERVOS = 12;
+std::atomic_bool stop = false;
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
@@ -21,6 +22,7 @@ int main(int argc, char *argv[]) {
   pupperv3::MotorID id1{pupperv3::CANChannel::CAN0, 1};
   pupperv3::MotorID id2{pupperv3::CANChannel::CAN0, 2};
   pupperv3::MotorID id3{pupperv3::CANChannel::CAN0, 3};
+
   pupperv3::MotorID id4{pupperv3::CANChannel::CAN0, 4};
   pupperv3::MotorID id5{pupperv3::CANChannel::CAN0, 5};
   pupperv3::MotorID id6{pupperv3::CANChannel::CAN0, 6};
@@ -28,6 +30,7 @@ int main(int argc, char *argv[]) {
   pupperv3::MotorID id7{pupperv3::CANChannel::CAN1, 1};
   pupperv3::MotorID id8{pupperv3::CANChannel::CAN1, 2};
   pupperv3::MotorID id9{pupperv3::CANChannel::CAN1, 3};
+
   pupperv3::MotorID id10{pupperv3::CANChannel::CAN1, 4};
   pupperv3::MotorID id11{pupperv3::CANChannel::CAN1, 5};
   pupperv3::MotorID id12{pupperv3::CANChannel::CAN1, 6};
@@ -62,7 +65,7 @@ int main(int argc, char *argv[]) {
       position_kp, speed_kp, max_speed, endstop_positions_degs, calibration_directions,
       std::move(interface));
   auto node = std::make_shared<pupperv3::MotorControllerNode<K_SERVOS>>(
-      publish_rate, std::move(controller), joint_names, default_position);
+      publish_rate, std::move(controller), joint_names, default_position, &stop);
 
   node->startup();
   rclcpp::spin(node);

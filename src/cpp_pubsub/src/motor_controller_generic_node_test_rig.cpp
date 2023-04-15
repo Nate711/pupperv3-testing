@@ -12,7 +12,7 @@
 constexpr int K_SERVOS = 3;
 
 int main(int argc, char *argv[]) {
-  spdlog::set_pattern("[%H:%M:%S.%e] [%^%5l%$] [%45s:%4#] %^%v%$");
+  spdlog::set_pattern("[%H:%M:%S.%e] [%^%7l%$] [%45s:%#] %^%v%$");
   rclcpp::init(argc, argv);
   float publish_rate = 500;
   if (argc > 1) {
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   pupperv3::MotorID id3{pupperv3::CANChannel::CAN0, 3};
   pupperv3::ActuatorConfiguration actuator_config{{id1, id2, id3}};
 
-  auto interface = std::make_unique<pupperv3::MotorInterface>(actuator_config);
+  auto interface = std::make_unique<pupperv3::MotorInterface>(actuator_config, true);
 
   // 20000 was on the brink of being too stiff
   // 10000 was on the soft side and robot would fall backwards often
@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
 
   node->startup();
   rclcpp::spin(node);
-  std::cout << "rclcpp done spinning" << std::endl;
+  SPDLOG_INFO("rclcpp done spinning");
   rclcpp::shutdown();
-  std::cout << "rclcpp shutdown" << std::endl;
+  SPDLOG_INFO("rclcpp shutdown");
   return 0;
 }

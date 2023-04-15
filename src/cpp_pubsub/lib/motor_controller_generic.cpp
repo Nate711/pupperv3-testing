@@ -5,6 +5,9 @@
 #include <thread>
 #include "math.h"
 
+#include <spdlog/fmt/ostr.h>
+#include <spdlog/spdlog.h>
+
 namespace pupperv3 {
 
 template <int N>
@@ -22,8 +25,11 @@ MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float m
   if (motor_interface_->actuator_config().size() != N) {
     // Exceptions call object destructors except if thrown in constructor
     motor_interface_.reset();
-    throw std::runtime_error(
-        "Number of actuators in motor interface does not match N for motor controller");
+    SPDLOG_ERROR(
+        "Number of actuators in motor interface ({}) does not match that for motor controller "
+        "({})",
+        motor_interface_->actuator_config().size(), N);
+    throw std::runtime_error("Number of actuator mismatch");
   }
   measured_endstop_positions_ = ActuatorVector::Zero();
   endstop_positions_ = endstop_positions_degs * M_PI / 180.0F;
@@ -31,12 +37,12 @@ MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float m
 
 template <int N>
 MotorController<N>::~MotorController() {
-  std::cout << "Motor controller destructor called" << std::endl;
+  SPDLOG_INFO("Destroying motor controller...");
 }
 
 template <int N>
 void MotorController<N>::begin() {
-  std::cout << "Initializing motor controller." << std::endl;
+  SPDLOG_INFO("Initializing motor controller.");
   // motor_interface_->initialize_canbuses();
   motor_interface_->initialize_motors();
   motor_interface_->start_read_threads();
@@ -117,7 +123,7 @@ template <int N>
 void MotorController<N>::position_control(const ActuatorVector &goal_positions, float position_kp,
                                           float max_speed, bool override_busy) {
   if (is_busy() && !override_busy) {
-    std::cout << "Ignoring position_control call because robot is busy" << std::endl;
+    SPDLOG_INFO("Ignoring position_control call because robot is busy");
     return;
   }
   throw_on_not_calibrated("position_control: robot not calibrated");
@@ -131,9 +137,9 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   velocity_command = velocity_command.cwiseMax(-max_speed).cwiseMin(max_speed);
 
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  std::cout << "pos ref: " << goal_positions.transpose().format(CleanFmt)
-            << " corrected pos: " << corrected_actuator_positions.transpose().format(CleanFmt)
-            << " raw pos: " << raw_actuator_positions().transpose().format(CleanFmt) << "\n";
+  SPDLOG_INFO("pos ref: {}", goal_positions.transpose().format(CleanFmt));
+  SPDLOG_INFO("corrected pos: {}", corrected_actuator_positions.transpose().format(CleanFmt));
+  SPDLOG_INFO("raw pos: {}", raw_actuator_positions().transpose().format(CleanFmt));
 
   velocity_control(velocity_command, override_busy);
 }
@@ -150,7 +156,7 @@ template <int N>
 void MotorController<N>::velocity_control(const ActuatorVector &velocity_command,
                                           bool override_busy) {
   if (is_busy() && !override_busy) {
-    std::cout << "Ignoring velocity_control call because robot is busy" << std::endl;
+    SPDLOG_INFO("Ignoring velocity_control call because robot is busy");
     return;
   }
 
@@ -172,8 +178,8 @@ bool MotorController<N>::is_calibrated() {
 
 // TODO: store calibration result position somewhere
 template <int N>
-void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) {
-  std::cout << "--------------- BEGINNING CALIBRATION ---------------" << std::endl;
+void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
+  SPDLOG_INFO("--------------- Starting calibration ---------------");
   using namespace std::chrono_literals;
   const float velocity_target = 750;  // rotor deg/s
   const float calibration_speed_kp = 30;
@@ -203,7 +209,12 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
   // loops_at_endstop.at(5) = 100;
   // loops_at_endstop.at(4 + 6) = 100;
 
-  while (!should_stop && !(loops_at_endstop.minCoeff() >= calibration_threshold)) {
+  while (loops_at_endstop.minCoeff() < calibration_threshold) {
+    if (should_stop) {
+      SPDLOG_WARN("-- Stopping calibration prematurely --");
+      break;
+    }
+
     // Command motors
     velocity_control(command_velocities, true);
 
@@ -248,14 +259,14 @@ void MotorController<N>::calibrate_motors(const std::atomic<bool> &should_stop) 
   // Set motors to zero velocity
   velocity_control(ActuatorVector::Zero(), true);
 
-  std::cout << "------------ FINISHED CALIBRATION ----------" << std::endl;
+  SPDLOG_INFO("Finished calibration");
 }
 template <int N>
-void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, float max_speed,
+void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, float max_speed,
                                        float position_kp, uint8_t move_speed_kp,
                                        const ActuatorVector &goal_position, float speed_tolerance,
                                        int wait_ticks) {
-  std::cout << "--------------- Starting blocking move-----------" << std::endl;
+  SPDLOG_INFO("--------------- Starting blocking move-----------");
   set_busy();
   using namespace std::chrono_literals;
   auto sleep_time = 5000us;
@@ -270,7 +281,7 @@ void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, flo
     position_control(goal_position, position_kp, max_speed, true);
     std::this_thread::sleep_for(sleep_time);
     if (should_stop) {
-      std::cout << "----------Blocking move cancelled-----------" << std::endl;
+      SPDLOG_WARN("-- Stopping blocking move prematurely --");
       break;
     }
     if ((actuator_velocities().template lpNorm<Eigen::Infinity>() < speed_tolerance) &&
@@ -290,7 +301,7 @@ void MotorController<N>::blocking_move(const std::atomic<bool> &should_stop, flo
 
   // Unblock robot controller
   set_available();
-  std::cout << "--------------- Finished blocking move-----------" << std::endl;
+  SPDLOG_INFO("--------------- Finished blocking move-----------");
 }
 
 // template class MotorController<1>;

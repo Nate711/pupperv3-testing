@@ -6,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -138,7 +139,8 @@ class MotorInterface {
 
   using ActuatorData = std::vector<MotorData>;
 
-  explicit MotorInterface(ActuatorConfiguration actuator_config, bool verbose = false);
+  MotorInterface(ActuatorConfiguration actuator_config);
+  MotorInterface(ActuatorConfiguration actuator_config, bool verbose);
   ~MotorInterface();
   void initialize_canbuses();
   void close_canbuses();
@@ -181,7 +183,7 @@ class MotorInterface {
  private:
   void initialize_bus(CANChannel bus);
   void initialize_motor(const MotorID& motor_id);
-  struct can_frame read_canframe_blocking(CANChannel bus);
+  std::optional<struct can_frame> read_canframe_blocking(CANChannel bus);
   static uint32_t motor_id_to_can_id(uint8_t motor_id);
   static uint8_t can_id_to_motor_id(uint32_t can_id);
   void read_thread(CANChannel channel);
