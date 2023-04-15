@@ -51,6 +51,10 @@ add_executable(motor_controller_generic_node_test src/motor_controller_generic_n
 target_link_libraries(motor_controller_generic_node_test pupperv3)
 ament_target_dependencies(motor_controller_generic_node_test rclcpp pupper_interfaces std_msgs sensor_msgs)
 
+add_executable(test_rig src/motor_controller_generic_node_test_rig.cpp lib/motor_controller_generic_node.cpp)
+target_link_libraries(test_rig pupperv3)
+ament_target_dependencies(test_rig rclcpp pupper_interfaces std_msgs sensor_msgs)
+
 add_executable(can_test src/can_test.cpp)
 target_link_libraries(can_test motor_interface)
 
@@ -66,16 +70,21 @@ target_link_libraries(my_test motor_controller_node)
 add_executable(calibration_test src/motor_controller_calibration_test.cpp)
 target_link_libraries(calibration_test motor_controller)
 
+add_executable(latency_test src/latency_test.cpp)
+ament_target_dependencies(latency_test rclcpp sensor_msgs std_msgs pupper_interfaces)
+
 install(TARGETS talker DESTINATION lib/${PROJECT_NAME})
 install(TARGETS can_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS pd_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_node_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_generic_node_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS test_rig DESTINATION lib/${PROJECT_NAME})
 install(TARGETS my_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS calibration_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS interface_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_generic_calibration_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS latency_test DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

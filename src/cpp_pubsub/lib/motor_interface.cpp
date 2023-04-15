@@ -32,7 +32,7 @@ TEMPLATE_HEADER
 MOTOR_INTERFACE::MotorInterface(std::vector<CANChannel> motor_connections)
     : motor_connections_(motor_connections), initialized_(false), should_read_(true) {
   // DEBUG ONLY
-  debug_start_ = time_now();
+  debug_start_ = prof_utils::now();
   canbus_to_fd_.fill(-1);
   for (size_t bus_idx = 0; bus_idx < latest_data_.size(); bus_idx++) {
     for (size_t motor_idx = 0; motor_idx < latest_data_.at(0).size(); motor_idx++) {
@@ -168,10 +168,11 @@ void MOTOR_INTERFACE::command_all_stop() {
 
 TEMPLATE_HEADER
 void MOTOR_INTERFACE::request_multi_angle(CANChannel bus, uint8_t motor_id) {
-  auto start = time_now();
+  auto start = prof_utils::now();
   send(bus, motor_id, {kGetMultiAngle, 0, 0, 0, 0, 0, 0, 0});
-  auto stop = time_now();
-  // std::cout << "Send (ns): " << duration_ns(stop - start) << "\t"; // Send takes roughly 81us
+  auto stop = prof_utils::now();
+  // std::cout << "Send (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Send takes
+  // roughly 81us
 }
 
 TEMPLATE_HEADER
@@ -202,17 +203,17 @@ struct can_frame MOTOR_INTERFACE::read_canframe_blocking(CANChannel bus) {
   memset(&frame, 0, sizeof(frame));
 
   // Print time to get fd
-  auto start = time_now();
+  auto start = prof_utils::now();
   int file_descriptor = canbus_to_fd_.at(static_cast<int>(bus));
-  auto stop = time_now();
-  // std::cout << "FD lookup (ns): " << duration_ns(stop - start) << "\t";
+  auto stop = prof_utils::now();
+  // std::cout << "FD lookup (ns): " <<prof_utils::duration_ns(stop - start) << "\t";
 
   // Print time to read from can bus
-  auto start_read = time_now();
+  auto start_read = prof_utils::now();
   long nbytes = read(file_descriptor, &frame, sizeof(struct can_frame));
-  auto stop_read = time_now();
-  // std::cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
-  // std::cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
+  auto stop_read = prof_utils::now();
+  // std::cout << "Read start (ms): " <<prof_utils::duration_ms(start_read - debug_start_) << "\t";
+  // std::cout << "Read end (ms): " <<prof_utils::duration_ms(stop_read - debug_start_) << "\t";
   if (nbytes < 0) {
     // Continue on read timeouts
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -223,8 +224,8 @@ struct can_frame MOTOR_INTERFACE::read_canframe_blocking(CANChannel bus) {
   if (nbytes != sizeof(struct can_frame)) {
     std::cerr << "ERROR: did not read full can frame\n";
   }
-  stop = time_now();
-  // std::cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
+  stop = prof_utils::now();
+  // std::cout << "CAN read (ns): " <<prof_utils::duration_ns(stop_read - start_read) << "\t";
   return frame;
 }
 
@@ -373,14 +374,14 @@ void MOTOR_INTERFACE::send(CANChannel bus, uint8_t motor_id,
   frame.can_id = can_id(motor_id);
   frame.len = 8;
   memcpy(frame.data, payload.data(), 8);
-  auto start = time_now();
+  auto start = prof_utils::now();
   if (write(file_descriptor, &frame, CAN_MTU) != CAN_MTU) {
     std::cerr << "Error writing frame to " << channel_str(bus) << "\n";
   }
-  auto stop = time_now();
-  // std::cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
-  // std::cout << "Send start (ms): " << duration_ms(start - debug_start_) << "\t";
-  // std::cout << "Send end (ms): " << duration_ms(stop - debug_start_) << "\t";
+  auto stop = prof_utils::now();
+  // std::cout << "Write (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Takes around
+  // 80us std::cout << "Send start (ms): " <<prof_utils::duration_ms(start - debug_start_) << "\t";
+  // std::cout << "Send end (ms): " <<prof_utils::duration_ms(stop - debug_start_) << "\t";
 }
 
 template class MotorInterface<1>;

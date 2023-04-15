@@ -124,6 +124,11 @@ struct MotorID {
   inline bool operator==(const MotorID& other) const {
     return other.bus == this->bus && other.motor_id == this->motor_id;
   }
+
+  inline friend std::ostream& operator<<(std::ostream& os, const MotorID& motor_id) {
+    os << "[bus=" << to_string(motor_id.bus) << " motor_id=" << motor_id.motor_id << "]";
+    return os;
+  }
 };
 
 using MotorIndex = int;
@@ -190,6 +195,8 @@ class MotorInterface {
 
   // O(N) search for motor given its ID and then return data
   // O(N) search is probably faster than hashmap at the typical number of motors (12)
+  int motor_flat_index(MotorID motor_id) const;
+
   MotorData& motor_data(MotorID motor_id);
   void parse_frame(CANChannel bus, const struct can_frame& frame);
   void multi_angle_update(const MotorID& motor_id, const struct can_frame& frame);
@@ -217,6 +224,20 @@ class MotorInterface {
 
   ActuatorData latest_data_;
   std::mutex latest_data_lock_;
+
+  // keep track of long term missed messages
+  std::vector<std::shared_ptr<std::atomic_int>> messages_sent_;
+  std::vector<std::shared_ptr<std::atomic_int>> messages_received_;
+
+  std::vector<std::shared_ptr<std::atomic_int>> messages_sent_since_last_receive_;
+
+  // Store time last message was sent on a particular bus
+  // Assumes two messages won't be sent without receiving a response
+  std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> time_last_sent_;
+
+  std::vector<
+      std::shared_ptr<std::atomic<std::chrono::time_point<std::chrono::high_resolution_clock>>>>
+      time_last_received_;
 
   std::unordered_set<CANChannel> canbuses_;
   std::unordered_map<CANChannel, std::shared_ptr<std::thread>> read_threads_;

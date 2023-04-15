@@ -34,11 +34,11 @@
 //   std::vector<std::array<float, K_SERVOS_PER_CHANNEL>> goal_positions = {{0}};
 
 //   // Boiler plate
-//   auto loop_start = time_now();
+//   auto loop_start = prof_utils::now();
 //   int loop_count = 0;
-//   auto last_loop_ts = time_now();
+//   auto last_loop_ts = prof_utils::now();
 //   while (!quit.load()) {
-//     auto loop_now = time_now();
+//     auto loop_now = prof_utils::now();
 //     if (loop_count % PRINT_CYCLE == 0) {
 //       std::cout << "\nSince start (us): " << duration_ms(loop_now - loop_start) << "\t";
 //       std::cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
@@ -66,21 +66,18 @@
 //   return 0;
 // }
 
-
-#include <iostream>
 #include <signal.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <iostream>
 
-void sigint_handler(sig_atomic_t signal) {
-  printf("Caught signal %d\n", signal);
-}
+void sigint_handler(sig_atomic_t signal) { printf("Caught signal %d\n", signal); }
 
 int main(int argc, char *argv[]) {
-    signal(SIGINT, sigint_handler);
-    while(1) {
-        std::cout<<"."<<std::endl;
-        usleep(10000);
-    }
+  signal(SIGINT, sigint_handler);
+  while (1) {
+    std::cout << "." << std::endl;
+    usleep(10000);
+  }
 }

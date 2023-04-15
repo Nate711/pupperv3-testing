@@ -33,9 +33,19 @@ MotorInterface::MotorInterface(ActuatorConfiguration actuator_config, bool verbo
       should_read_(true),
       verbose_(verbose) {
   // DEBUG ONLY
-  debug_start_ = time_now();
+  debug_start_ = prof_utils::now();
   for (auto const &motor_id : actuator_config) {
     latest_data_.emplace_back();
+
+    // initialize debug arrays
+    messages_sent_.push_back(std::make_shared<std::atomic_int>(0));
+    messages_received_.push_back(std::make_shared<std::atomic_int>(0));
+    messages_sent_since_last_receive_.push_back(std::make_shared<std::atomic_int>(0));
+    time_last_sent_.emplace_back();
+    time_last_received_.push_back(
+        std::make_shared<
+            std::atomic<std::chrono::time_point<std::chrono::high_resolution_clock>>>());
+
     canbuses_.insert(motor_id.bus);
   }
   initialize_canbuses();
@@ -146,10 +156,11 @@ void MotorInterface::command_all_stop() {
 }
 
 void MotorInterface::request_multi_angle(const MotorID &motor_id) {
-  auto start = time_now();
+  auto start = prof_utils::now();
   send(motor_id, {kGetMultiAngle, 0, 0, 0, 0, 0, 0, 0});
-  auto stop = time_now();
-  // std::cout << "Send (ns): " << duration_ns(stop - start) << "\t"; // Send takes roughly 81us
+  auto stop = prof_utils::now();
+  // std::cout << "Send (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Send takes
+  // roughly 81us
 }
 
 void MotorInterface::update_rotation(CommonResponse &common) {
@@ -179,17 +190,17 @@ struct can_frame MotorInterface::read_canframe_blocking(CANChannel bus) {
   memset(&frame, 0, sizeof(frame));
 
   // Print time to get fd
-  auto start = time_now();
+  auto start = prof_utils::now();
   int file_descriptor = canbus_to_fd_.at(bus);
-  auto stop = time_now();
-  // std::cout << "FD lookup (ns): " << duration_ns(stop - start) << "\t";
+  auto stop = prof_utils::now();
+  // std::cout << "FD lookup (ns): " <<prof_utils::duration_ns(stop - start) << "\t";
 
   // Print time to read from can bus
-  auto start_read = time_now();
+  auto start_read = prof_utils::now();
   long nbytes = read(file_descriptor, &frame, sizeof(struct can_frame));
-  auto stop_read = time_now();
-  // std::cout << "Read start (ms): " << duration_ms(start_read - debug_start_) << "\t";
-  // std::cout << "Read end (ms): " << duration_ms(stop_read - debug_start_) << "\t";
+  auto stop_read = prof_utils::now();
+  // std::cout << "Read start (ms): " <<prof_utils::duration_ms(start_read - debug_start_) << "\t";
+  // std::cout << "Read end (ms): " <<prof_utils::duration_ms(stop_read - debug_start_) << "\t";
   if (nbytes < 0) {
     // Continue on read timeouts
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -200,18 +211,23 @@ struct can_frame MotorInterface::read_canframe_blocking(CANChannel bus) {
   if (nbytes != sizeof(struct can_frame)) {
     std::cerr << "ERROR: did not read full can frame\n";
   }
-  stop = time_now();
-  // std::cout << "CAN read (ns): " << duration_ns(stop_read - start_read) << "\t";
+  stop = prof_utils::now();
+  // std::cout << "CAN read (ns): " <<prof_utils::duration_ns(stop_read - start_read) << "\t";
   return frame;
 }
 
-MotorData &MotorInterface::motor_data(MotorID motor_id) {
+int MotorInterface::motor_flat_index(MotorID motor_id) const {
   for (int i = 0; i < actuator_config_.size(); i++) {
     if (actuator_config_[i] == motor_id) {
-      return latest_data_.at(i);
+      return i;
     }
   }
+  std::cerr << "motor_id not found: " << motor_id << "\n";
   throw std::invalid_argument("Could not find actuator with given motor_id");
+}
+
+MotorData &MotorInterface::motor_data(MotorID motor_id) {
+  return latest_data_[motor_flat_index(motor_id)];
 }
 
 MotorData MotorInterface::motor_data_safe(const MotorID &motor_id) {
@@ -259,6 +275,17 @@ void MotorInterface::parse_frame(CANChannel bus, const struct can_frame &frame) 
   MotorID motor_id;
   motor_id.bus = bus;
   motor_id.motor_id = can_id_to_motor_id(frame.can_id);
+  
+  (*messages_received_.at(motor_flat_index(motor_id)))++;
+  if(verbose_) {
+    std::cout << "# sent before this receive: " << messages_sent_since_last_receive_.at(motor_flat_index(motor_id)) << "\n";
+  }
+  (*messages_sent_since_last_receive_.at(motor_flat_index(motor_id))) = 0;
+  *time_last_received_.at(motor_flat_index(motor_id)) = prof_utils::now();
+  if(verbose_) {
+    std::cout << "Time since sent: " << prof_utils::duration_ns(prof_utils::now() - time_last_sent_.at(motor_flat_index(motor_id))) << "ns \n";
+  }
+
   if (motor_id.motor_id <= 0) {
     std::cout << "Invalid motor id: " << motor_id.motor_id << '\n';
     return;
@@ -350,14 +377,19 @@ void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> 
   frame.can_id = motor_id_to_can_id(motor_id.motor_id);
   frame.len = 8;
   memcpy(frame.data, payload.data(), 8);
-  auto start = time_now();
+  auto start = prof_utils::now();
   if (write(file_descriptor, &frame, CAN_MTU) != CAN_MTU) {
     std::cerr << "Error writing frame to " << to_string(motor_id.bus) << "\n";
   }
-  auto stop = time_now();
-  // std::cout << "Write (ns): " << duration_ns(stop - start) << "\t"; // Takes around 80us
-  // std::cout << "Send start (ms): " << duration_ms(start - debug_start_) << "\t";
-  // std::cout << "Send end (ms): " << duration_ms(stop - debug_start_) << "\t";
+  auto stop = prof_utils::now();
+
+  // Record that we sent a message to this motor
+  time_last_sent_[motor_flat_index(motor_id)] = prof_utils::now();
+  (*messages_sent_.at(motor_flat_index(motor_id)))++;
+
+  // std::cout << "Write (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Takes around
+  // 80us std::cout << "Send start (ms): " <<prof_utils::duration_ms(start - debug_start_) << "\t";
+  // std::cout << "Send end (ms): " <<prof_utils::duration_ms(stop - debug_start_) << "\t";
 }
 
 }  // namespace pupperv3

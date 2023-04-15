@@ -24,16 +24,16 @@ int main() {
   motor_interface.start_read_threads();
   std::cout << "Initialized canbuses, motors, threads" << std::endl;
 
-  auto loop_start = time_now();
+  auto loop_start = prof_utils::now();
 
   int loop_count = 0;
-  auto last_loop_ts = time_now();
+  auto last_loop_ts = prof_utils::now();
   while (!quit.load()) {
     // Print time since start of program
-    auto loop_now = time_now();
+    auto loop_now = prof_utils::now();
     if (loop_count % PRINT_CYCLE == 0) {
-      std::cout << "\nSince start (us): " << duration_ms(loop_now - loop_start) << "\t";
-      std::cout << "DT (us): " << duration_ms(loop_now - last_loop_ts) << "\t";
+      std::cout << "\nSince start (us): " << prof_utils::duration_ms(loop_now - loop_start) << "\t";
+      std::cout << "DT (us): " << prof_utils::duration_ms(loop_now - last_loop_ts) << "\t";
     }
     last_loop_ts = loop_now;
 

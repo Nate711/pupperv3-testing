@@ -24,34 +24,34 @@ int main() {
 
   float prevent_cut = 0;
 
-  auto loop_start = time_now();
+  auto loop_start = prof_utils::now();
   while (!quit.load()) {
     // Print time since start of program
-    auto loop_now = time_now();
+    auto loop_now = prof_utils::now();
     auto since_start = std::chrono::duration_cast<std::chrono::microseconds>(loop_now - loop_start);
     std::cout << "\nSince start (us): " << since_start.count() << "\t";
 
     // Print time took to send angle request
-    auto start = time_now();
+    auto start = prof_utils::now();
     motor_interface->request_multi_angle(CANChannel::CAN0, 1);
     motor_interface->request_multi_angle(CANChannel::CAN0, 2);
     motor_interface->request_multi_angle(CANChannel::CAN0, 3);
     // motor_interface->request_multi_angle(CANChannel::CAN1, 1);
     // motor_interface->request_multi_angle(CANChannel::CAN1, 2);
     // motor_interface->request_multi_angle(CANChannel::CAN1, 3);
-    auto stop = time_now();
-    std::cout << "Angle request (ns): " << duration_ns(stop - start)
+    auto stop = prof_utils::now();
+    std::cout << "Angle request (ns): " << prof_utils::duration_ns(stop - start)
               << "\t";  // takes 80us with large variance
 
-    auto retrieve_start = time_now();
+    auto retrieve_start = prof_utils::now();
     auto latest_data = motor_interface->motor_data_safe();
     for (int bus = 0; bus < 2; bus++) {
       for (int servo = 0; servo < 3; servo++) {
         std::cout << latest_data.at(bus).at(servo).multi_loop.multi_loop_angle << "\t";
       }
     }
-    auto retrieve_end = time_now();
-    std::cout << "Retrival time (ns):\t" << duration_ns(retrieve_end - retrieve_start)
+    auto retrieve_end = prof_utils::now();
+    std::cout << "Retrival time (ns):\t" << prof_utils::duration_ns(retrieve_end - retrieve_start)
               << "\t";  // 3000ns average when adding angles
     std::cout << "Size of data: " << sizeof(latest_data) << std::endl;
 
