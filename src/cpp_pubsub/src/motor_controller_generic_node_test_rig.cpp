@@ -1,17 +1,3 @@
-// Copyright 2016 Open Source Robotics Foundation, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -21,15 +7,18 @@
 #include <rclcpp/rclcpp.hpp>
 #include "motor_controller_generic_node.hpp"
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#include <spdlog/spdlog.h>
 constexpr int K_SERVOS = 3;
 
 int main(int argc, char *argv[]) {
+  spdlog::set_pattern("[%H:%M:%S.%e] [%^%5l%$] [%45s:%4#] %^%v%$");
   rclcpp::init(argc, argv);
   float publish_rate = 500;
   if (argc > 1) {
     publish_rate = std::stof(argv[1]);
   }
-  std::cout << "Joint state publish_rate: " << publish_rate << std::endl;
+  SPDLOG_INFO("Joint state publish_rate: {}", publish_rate);
 
   // Create config
   pupperv3::MotorID id1{pupperv3::CANChannel::CAN0, 1};
@@ -47,8 +36,8 @@ int main(int argc, char *argv[]) {
   using ActuatorVector = pupperv3::MotorController<K_SERVOS>::ActuatorVector;
   ActuatorVector endstop_positions_degs = {-135, 90, 68};
   ActuatorVector calibration_directions = {-1, 1, 1};
-  std::array<std::string, K_SERVOS> joint_names = {
-      "leg_front_r_1", "leg_front_r_2", "leg_front_r_3"};
+  std::array<std::string, K_SERVOS> joint_names = {"leg_front_r_1", "leg_front_r_2",
+                                                   "leg_front_r_3"};
 
   ActuatorVector default_position = {0, 0, 1.0};
 

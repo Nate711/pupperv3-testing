@@ -1,14 +1,8 @@
 #pragma once
 
 #include <signal.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <array>
 #include <atomic>
-#include <chrono>
-#include <cstring>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -60,7 +54,7 @@ inline std::string to_string(CANChannel channel) {
     case CANChannel::CAN3:
       return "can3";
     default:
-      std::cerr << "Invalid can channel" << std::endl;
+      throw std::runtime_error("invalid channel");
       return "";
   }
 }

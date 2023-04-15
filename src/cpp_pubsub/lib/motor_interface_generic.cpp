@@ -1,27 +1,10 @@
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <array>
-#include <chrono>
-#include <cstring>
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <unordered_map>
-#include <vector>
-
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-
-#include <linux/can.h>
-#include <linux/can/raw.h>
-
 #include "motor_interface_generic.hpp"
 #include "prof_utils.hpp"
+
+// May need to define this idk
+// #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#include <spdlog/fmt/ostr.h>
+#include <spdlog/spdlog.h>
 
 namespace pupperv3 {
 
@@ -52,17 +35,17 @@ MotorInterface::MotorInterface(ActuatorConfiguration actuator_config, bool verbo
 }
 
 MotorInterface::~MotorInterface() {
-  std::cout << "Calling motor interface destructor.\n";
-  std::cout << "Stopping all motors.\n";
+  SPDLOG_INFO("Calling motor interface destructor.");
+  SPDLOG_INFO("Stopping all motors.\n");
   command_all_stop();
 
-  std::cout << "Signaling read threads to stop.\n";
+  SPDLOG_INFO("Signaling read threads to stop.\n");
   should_read_.store(false);
 
   //   Causes lots of can socket exceptions / errors
   for (auto &[bus, thread] : read_threads_) {
     if (thread) {
-      std::cout << "Joining read thread for " << to_string(bus) << ". ";
+      SPDLOG_INFO("Joining read thread for {}", to_string(bus));
       thread->join();
     }
   }
@@ -77,11 +60,11 @@ void MotorInterface::initialize_canbuses() {
 }
 
 void MotorInterface::close_canbuses() {
-  std::cout << "\nClosing can bus sockets...";
+  SPDLOG_INFO("\nClosing can bus sockets...");
   for (const auto &bus : canbuses_) {
     close(canbus_to_fd_.at(bus));
   }
-  std::cout << "closed." << std::endl;
+  SPDLOG_INFO("closed.");
 }
 
 void MotorInterface::initialize_motors() {
@@ -159,7 +142,7 @@ void MotorInterface::request_multi_angle(const MotorID &motor_id) {
   auto start = prof_utils::now();
   send(motor_id, {kGetMultiAngle, 0, 0, 0, 0, 0, 0, 0});
   auto stop = prof_utils::now();
-  // std::cout << "Send (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Send takes
+  // SPDLOG_INFO("Send (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Send takes
   // roughly 81us
 }
 
@@ -180,7 +163,7 @@ void MotorInterface::update_rotation(CommonResponse &common) {
 void MotorInterface::read_blocking(CANChannel bus) {
   struct can_frame frame = read_canframe_blocking(bus);
   if (verbose_) {
-    std::cout << "Read Bus: " << to_string(bus) << " CAN ID: " << frame.can_id << "\n";
+    SPDLOG_INFO("Read Bus: {} CAN ID: {}", to_string(bus), frame.can_id);
   }
   parse_frame(bus, frame);
 }
@@ -193,26 +176,26 @@ struct can_frame MotorInterface::read_canframe_blocking(CANChannel bus) {
   auto start = prof_utils::now();
   int file_descriptor = canbus_to_fd_.at(bus);
   auto stop = prof_utils::now();
-  // std::cout << "FD lookup (ns): " <<prof_utils::duration_ns(stop - start) << "\t";
+  // SPDLOG_INFO("FD lookup (ns): " <<prof_utils::duration_ns(stop - start) << "\t";
 
   // Print time to read from can bus
   auto start_read = prof_utils::now();
   long nbytes = read(file_descriptor, &frame, sizeof(struct can_frame));
   auto stop_read = prof_utils::now();
-  // std::cout << "Read start (ms): " <<prof_utils::duration_ms(start_read - debug_start_) << "\t";
-  // std::cout << "Read end (ms): " <<prof_utils::duration_ms(stop_read - debug_start_) << "\t";
+  // SPDLOG_INFO("Read start (ms): " <<prof_utils::duration_ms(start_read - debug_start_) << "\t";
+  // SPDLOG_INFO("Read end (ms): " <<prof_utils::duration_ms(stop_read - debug_start_) << "\t";
   if (nbytes < 0) {
     // Continue on read timeouts
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      std::cout << "Bus " << static_cast<int>(bus) << " timed out on read" << std::endl;
+      SPDLOG_INFO("Bus {} timed out on read", static_cast<int>(bus));
     }
-    std::cerr << "ERROR: can raw socket read\n";
+    SPDLOG_ERROR("ERROR: can raw socket read");
   }
   if (nbytes != sizeof(struct can_frame)) {
-    std::cerr << "ERROR: did not read full can frame\n";
+    SPDLOG_ERROR("ERROR: did not read full can frame");
   }
   stop = prof_utils::now();
-  // std::cout << "CAN read (ns): " <<prof_utils::duration_ns(stop_read - start_read) << "\t";
+  // SPDLOG_INFO("CAN read (ns): " <<prof_utils::duration_ns(stop_read - start_read) << "\t";
   return frame;
 }
 
@@ -222,7 +205,7 @@ int MotorInterface::motor_flat_index(MotorID motor_id) const {
       return i;
     }
   }
-  std::cerr << "motor_id not found: " << motor_id << "\n";
+  SPDLOG_ERROR("motor_id not found: {}", motor_id);
   throw std::invalid_argument("Could not find actuator with given motor_id");
 }
 
@@ -275,26 +258,29 @@ void MotorInterface::parse_frame(CANChannel bus, const struct can_frame &frame) 
   MotorID motor_id;
   motor_id.bus = bus;
   motor_id.motor_id = can_id_to_motor_id(frame.can_id);
-  
+
   (*messages_received_.at(motor_flat_index(motor_id)))++;
-  if(verbose_) {
-    std::cout << "# sent before this receive: " << messages_sent_since_last_receive_.at(motor_flat_index(motor_id)) << "\n";
+  if (verbose_) {
+    SPDLOG_INFO("# sent before this receive: {}",
+                messages_sent_since_last_receive_.at(motor_flat_index(motor_id))->load());
   }
   (*messages_sent_since_last_receive_.at(motor_flat_index(motor_id))) = 0;
   *time_last_received_.at(motor_flat_index(motor_id)) = prof_utils::now();
-  if(verbose_) {
-    std::cout << "Time since sent: " << prof_utils::duration_ns(prof_utils::now() - time_last_sent_.at(motor_flat_index(motor_id))) << "ns \n";
+  if (verbose_) {
+    SPDLOG_INFO("Time since sent: {} ns",
+                prof_utils::duration_ns(prof_utils::now() -
+                                        time_last_sent_.at(motor_flat_index(motor_id))));
   }
 
   if (motor_id.motor_id <= 0) {
-    std::cout << "Invalid motor id: " << motor_id.motor_id << '\n';
+    SPDLOG_INFO("Invalid motor id: {}", motor_id.motor_id);
     return;
   }
 
   uint8_t command_id = frame.data[0];
   if (command_id == kGetMultiAngle) {
     multi_angle_update(motor_id, frame);
-    std::cout << "got multi angle" << std::endl;
+    SPDLOG_INFO("got multi angle");
   }
   if (command_id == kCommandCurrent || command_id == kCommandVelocity) {
     torque_velocity_update(motor_id, frame);
@@ -303,7 +289,7 @@ void MotorInterface::parse_frame(CANChannel bus, const struct can_frame &frame) 
 
 void MotorInterface::start_read_threads() {
   for (auto canbus : canbuses_) {
-    std::cout << "Starting read thread on bus: " << to_string(canbus) << std::endl;
+    SPDLOG_INFO("Starting read thread on bus: {}", to_string(canbus));
     read_threads_.insert(
         {canbus, std::make_shared<std::thread>(&MotorInterface::read_thread, this, canbus)});
   }
@@ -313,9 +299,9 @@ void MotorInterface::initialize_bus(CANChannel bus) {
   int socket_id;
   struct sockaddr_can addr;
   struct ifreq ifr;
-  std::cout << "Initializing " << to_string(bus) << "." << std::endl;
+  SPDLOG_INFO("Initializing {}", to_string(bus));
   if ((socket_id = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-    std::cerr << "socket\n";
+    SPDLOG_ERROR("socket");
     throw std::runtime_error("could not construct can socket object");
   }
 
@@ -323,17 +309,17 @@ void MotorInterface::initialize_bus(CANChannel bus) {
   strcpy(ifr.ifr_name, to_string(bus).c_str());
   ifr.ifr_ifindex = static_cast<int>(if_nametoindex(ifr.ifr_name));
   if (ifr.ifr_ifindex == 0) {
-    std::cerr << "if_nametoindex\n";
+    SPDLOG_ERROR("could not find can bus named: {}", to_string(bus));
     throw std::invalid_argument("could not find can bus");
   }
   memset(&addr, 0, sizeof(addr));
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
-  std::cout << "Found: " << to_string(bus) << " ifindex: " << addr.can_ifindex << std::endl;
+  SPDLOG_INFO("Found: {} ifindex: {}", to_string(bus), addr.can_ifindex);
 
   // bind socket
   if (bind(socket_id, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    std::cerr << "bind\n";
+    SPDLOG_ERROR("bind");
     throw std::runtime_error("could nto bind");
   }
   canbus_to_fd_.insert({bus, socket_id});
@@ -346,8 +332,8 @@ void MotorInterface::initialize_bus(CANChannel bus) {
 }
 
 void MotorInterface::initialize_motor(const MotorID &motor_id) {
-  std::cout << "Initializing motor id: " << static_cast<int>(motor_id.motor_id);
-  std::cout << " on channel: " << to_string(motor_id.bus) << std::endl;
+  SPDLOG_INFO("Initializing motor id: {}", static_cast<int>(motor_id.motor_id));
+  SPDLOG_INFO(" on channel: ", to_string(motor_id.bus));
 
   send(motor_id, {kStartup0, 0, 0, 0, 0, 0, 0, 0});
   usleep(10000);
@@ -370,7 +356,7 @@ void MotorInterface::read_thread(CANChannel channel) {
 /* Only non-thread-safe part of this function is reading canbus_to_fd_.
  * However, it's array of int so probably ok */
 void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> &payload) {
-  // std::cout << "Send can message\n";
+  // SPDLOG_INFO("Send can message\n";
   int file_descriptor = canbus_to_fd_.at(motor_id.bus);
   struct can_frame frame;
   memset(&frame, 0, sizeof(frame));
@@ -379,7 +365,7 @@ void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> 
   memcpy(frame.data, payload.data(), 8);
   auto start = prof_utils::now();
   if (write(file_descriptor, &frame, CAN_MTU) != CAN_MTU) {
-    std::cerr << "Error writing frame to " << to_string(motor_id.bus) << "\n";
+    SPDLOG_ERROR("Error writing frame to {}", to_string(motor_id.bus));
   }
   auto stop = prof_utils::now();
 
@@ -387,9 +373,9 @@ void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> 
   time_last_sent_[motor_flat_index(motor_id)] = prof_utils::now();
   (*messages_sent_.at(motor_flat_index(motor_id)))++;
 
-  // std::cout << "Write (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Takes around
-  // 80us std::cout << "Send start (ms): " <<prof_utils::duration_ms(start - debug_start_) << "\t";
-  // std::cout << "Send end (ms): " <<prof_utils::duration_ms(stop - debug_start_) << "\t";
+  // SPDLOG_INFO("Write (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Takes around
+  // 80us SPDLOG_INFO("Send start (ms): " <<prof_utils::duration_ms(start - debug_start_) << "\t";
+  // SPDLOG_INFO("Send end (ms): " <<prof_utils::duration_ms(stop - debug_start_) << "\t";
 }
 
 }  // namespace pupperv3

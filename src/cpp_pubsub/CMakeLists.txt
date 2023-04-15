@@ -21,17 +21,9 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 # Libraries
 include_directories(${CMAKE_SOURCE_DIR}/lib)
-add_library(motor_interface lib/motor_interface.cpp)
 
 add_library(pupperv3 lib/motor_interface_generic.cpp lib/motor_controller_generic.cpp)
-
-add_library(motor_controller lib/motor_controller.cpp)
-target_link_libraries(motor_controller motor_interface)
-
-add_library(motor_controller_node lib/motor_controller_node.cpp)
-target_link_libraries(motor_controller_node motor_controller)
-ament_target_dependencies(motor_controller_node rclcpp std_msgs sensor_msgs
-                          pupper_interfaces)
+target_link_libraries(pupperv3 spdlog::spdlog_header_only)
 
 # Executables
 add_executable(interface_test src/interface_test.cpp)
@@ -40,12 +32,10 @@ target_link_libraries(interface_test pupperv3 gflags)
 add_executable(motor_controller_generic_calibration_test src/motor_controller_generic_calibration_test.cpp)
 target_link_libraries(motor_controller_generic_calibration_test pupperv3 gflags)
 
-add_executable(talker src/joint_state_publisher.cpp)
-target_link_libraries(talker motor_interface)
-ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
-
-add_executable(motor_controller_node_test src/motor_controller_node_test.cpp)
-target_link_libraries(motor_controller_node_test motor_controller_node)
+# Must update for generic interface
+# add_executable(talker src/joint_state_publisher.cpp)
+# target_link_libraries(talker motor_interface)
+# ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
 
 add_executable(motor_controller_generic_node_test src/motor_controller_generic_node_test.cpp lib/motor_controller_generic_node.cpp)
 target_link_libraries(motor_controller_generic_node_test pupperv3)
@@ -55,33 +45,12 @@ add_executable(test_rig src/motor_controller_generic_node_test_rig.cpp lib/motor
 target_link_libraries(test_rig pupperv3)
 ament_target_dependencies(test_rig rclcpp pupper_interfaces std_msgs sensor_msgs)
 
-add_executable(can_test src/can_test.cpp)
-target_link_libraries(can_test motor_interface)
-
-add_executable(pd_test src/pd_test.cpp)
-target_link_libraries(pd_test motor_interface)
-
-add_executable(motor_controller_test src/motor_controller_test.cpp)
-target_link_libraries(motor_controller_test motor_controller)
-
-add_executable(my_test src/test.cpp)
-target_link_libraries(my_test motor_controller_node)
-
-add_executable(calibration_test src/motor_controller_calibration_test.cpp)
-target_link_libraries(calibration_test motor_controller)
-
 add_executable(latency_test src/latency_test.cpp)
 ament_target_dependencies(latency_test rclcpp sensor_msgs std_msgs pupper_interfaces)
 
-install(TARGETS talker DESTINATION lib/${PROJECT_NAME})
-install(TARGETS can_test DESTINATION lib/${PROJECT_NAME})
-install(TARGETS pd_test DESTINATION lib/${PROJECT_NAME})
-install(TARGETS motor_controller_test DESTINATION lib/${PROJECT_NAME})
-install(TARGETS motor_controller_node_test DESTINATION lib/${PROJECT_NAME})
+# install(TARGETS talker DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_generic_node_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS test_rig DESTINATION lib/${PROJECT_NAME})
-install(TARGETS my_test DESTINATION lib/${PROJECT_NAME})
-install(TARGETS calibration_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS interface_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_generic_calibration_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS latency_test DESTINATION lib/${PROJECT_NAME})

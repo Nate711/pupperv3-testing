@@ -1,6 +1,7 @@
 #include "motor_controller_generic.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <thread>
 #include "math.h"
 

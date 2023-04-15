@@ -3,7 +3,6 @@
 #include <bit>
 #include <iostream>
 #include <vector>
-#include "motor_controller_node.hpp"
 
 /* function to show bytes in memory, from location start to start+n*/
 void show_mem_rep(char *start, int n) {
@@ -19,15 +18,5 @@ int main() {
   show_mem_rep((char *)&i, sizeof(i));
   // SHOWS LITTLE ENDIANNESS
   // LSB is data[0]
-
-  std::vector<double> input = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-  auto res = MotorControllerNode::split_vector(input);
-  for (auto arr : res) {
-    for (auto item : arr) {
-      std::cout << item << " ";
-    }
-    std::cout << std::endl;
-  }
-
   return 0;
 }

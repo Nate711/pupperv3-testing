@@ -1,17 +1,3 @@
-// Copyright 2016 Open Source Robotics Foundation, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include <cassert>
 #include <chrono>
 #include <functional>
@@ -24,6 +10,9 @@
 #include <std_msgs/msg/string.hpp>
 
 #include "motor_controller_generic_node.hpp"
+
+#include <spdlog/fmt/ostr.h>
+#include <spdlog/spdlog.h>
 
 #include <atomic>
 
@@ -42,7 +31,7 @@ MotorControllerNode<K_SERVOS>::MotorControllerNode(
       default_position_(default_position) {
   // CAN interface setup
   motor_controller_->begin();
-  std::cout << "Initialized motor controller." << std::endl;
+  SPDLOG_INFO("Initialized motor controller.");
 
   // Joint State joint_state_message_ setup
   for (std::string joint_name : joint_names) {
@@ -64,10 +53,9 @@ MotorControllerNode<K_SERVOS>::MotorControllerNode(
 
 template <int K_SERVOS>
 MotorControllerNode<K_SERVOS>::~MotorControllerNode() {
-  std::cout << "Destroying motor controller node..." << std::endl;
-  stop_ = true;
+  SPDLOG_INFO("Destroying motor controller node...");
   calibration_thread_.join();
-  std::cout << "Finished destroying motor controller." << std::endl;
+  SPDLOG_INFO("Finished destroying motor controller.");
 }
 
 template <int K_SERVOS>
@@ -117,7 +105,7 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
   auto efforts = motor_controller_->actuator_efforts();
 
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  std::cout << "pos ref: " << positions.transpose().format(CleanFmt) << "\n";
+  SPDLOG_INFO("pos ref: {}", positions.transpose().format(CleanFmt));
 
   for (int i = 0; i < positions.size(); i++) {
     joint_state_message_.position.at(i) = positions(i);
