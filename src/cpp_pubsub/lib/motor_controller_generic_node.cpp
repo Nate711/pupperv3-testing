@@ -1,3 +1,5 @@
+#include "motor_controller_generic_node.hpp"
+
 #include <cassert>
 #include <chrono>
 #include <functional>
@@ -8,8 +10,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/string.hpp>
-
-#include "motor_controller_generic_node.hpp"
 
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
