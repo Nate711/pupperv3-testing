@@ -50,6 +50,11 @@ MotorControllerNode<K_SERVOS>::MotorControllerNode(
   subscriber_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
       "/joint_commands", rclcpp::SensorDataQoS(),
       std::bind(&MotorControllerNode::joint_command_callback, this, _1));
+
+  // Start watchdog with period 0.5x max timeout
+  watchdog_timer_ =
+      this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogTimeoutUS * 2.0).period(),
+                              std::bind(&MotorControllerNode::watchdog_callback, this));
 }
 
 template <int K_SERVOS>
@@ -91,7 +96,7 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
     RCLCPP_WARN(this->get_logger(), "Joint command vector size != K_SERVOS");
   } else if (motor_controller_->is_calibrated()) {
     ActuatorVector motor_position_targets;
-    for (int i = 0; i < latest_joint_command_.position_target.size(); i++) {
+    for (size_t i = 0; i < latest_joint_command_.position_target.size(); i++) {
       motor_position_targets(i) = latest_joint_command_.position_target[i];
     }
     motor_controller_->position_control(motor_position_targets);
@@ -116,6 +121,23 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
   }
   publisher_->publish(joint_state_message_);
 }
+
+template <int K_SERVOS>
+void MotorControllerNode<K_SERVOS>::watchdog_callback() {
+  auto latency = motor_controller_->micros_since_last_read();
+  int max_latency = latency.maxCoeff();
+  int max_idx;
+  latency.maxCoeff(&max_idx);
+
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+  SPDLOG_INFO("Microseconds since last read: {}", latency.transpose().format(CleanFmt));
+  if (max_latency > kWatchDogTimeoutUS) {
+    SPDLOG_ERROR("Watchdog: Latency on motor {}: {} us. Max allowed: {} us", max_idx, max_latency,
+                 kWatchDogTimeoutUS);
+    throw WatchdogTriggered("Watchdog triggered");
+  }
+}
+
 template class MotorControllerNode<3>;
 template class MotorControllerNode<6>;
 template class MotorControllerNode<12>;

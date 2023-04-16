@@ -180,6 +180,8 @@ class MotorInterface {
 
   inline const ActuatorConfiguration& actuator_config() { return actuator_config_; }
 
+  std::vector<int> micros_since_last_read() const;
+
  private:
   void initialize_bus(CANChannel bus);
   void initialize_motor(const MotorID& motor_id);

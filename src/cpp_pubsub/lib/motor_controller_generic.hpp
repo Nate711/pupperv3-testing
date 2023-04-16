@@ -64,6 +64,10 @@ class MotorController {
                      uint8_t speed_kp, const ActuatorVector &goal_position,
                      float speed_tolerance = 0.01, int wait_ticks = 20);
 
+  inline ActuatorVectorI micros_since_last_read() const {
+    return ActuatorVectorI(motor_interface_->micros_since_last_read().data());
+  }
+
  private:
   static float raw_to_calibrated(float val, float measured_endstop_position,
                                  float endstop_position);

@@ -6,8 +6,13 @@ inline long duration_ns(T t) {
 }
 
 template <typename T>
-inline long duration_ms(T t) {
+inline long duration_us(T t) {
   return std::chrono::duration_cast<std::chrono::microseconds>(t).count();
+}
+
+template <typename T>
+inline long duration_ms(T t) {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 }
 
 inline std::chrono::time_point<std::chrono::high_resolution_clock> now() {

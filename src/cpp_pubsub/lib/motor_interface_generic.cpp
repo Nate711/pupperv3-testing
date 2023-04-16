@@ -29,8 +29,8 @@ MotorInterface::MotorInterface(ActuatorConfiguration actuator_config, bool verbo
     messages_sent_since_last_receive_.push_back(std::make_shared<std::atomic_int>(0));
     time_last_sent_.emplace_back();
     time_last_received_.push_back(
-        std::make_shared<
-            std::atomic<std::chrono::time_point<std::chrono::high_resolution_clock>>>());
+        std::make_shared<std::atomic<std::chrono::time_point<std::chrono::high_resolution_clock>>>(
+            prof_utils::now()));
 
     canbuses_.insert(motor_id.bus);
   }
@@ -268,18 +268,18 @@ void MotorInterface::parse_frame(CANChannel bus, const struct can_frame &frame) 
   motor_id.bus = bus;
   motor_id.motor_id = can_id_to_motor_id(frame.can_id);
 
-  (*messages_received_.at(motor_flat_index(motor_id)))++;
+  int motor_idx = motor_flat_index(motor_id);
+  (*messages_received_.at(motor_idx))++;
   if (verbose_) {
     SPDLOG_INFO("- Bus: {} motor_id: {}", to_string(bus), motor_id.motor_id);
     SPDLOG_INFO("- Msgs sent before this receive: {}",
-                messages_sent_since_last_receive_.at(motor_flat_index(motor_id))->load());
+                messages_sent_since_last_receive_.at(motor_idx)->load());
   }
-  (*messages_sent_since_last_receive_.at(motor_flat_index(motor_id))) = 0;
-  *time_last_received_.at(motor_flat_index(motor_id)) = prof_utils::now();
+  (*messages_sent_since_last_receive_.at(motor_idx)) = 0;
+  *time_last_received_.at(motor_idx) = prof_utils::now();
   if (verbose_) {
     SPDLOG_INFO("- Time since sent: {} ns",
-                prof_utils::duration_ns(prof_utils::now() -
-                                        time_last_sent_.at(motor_flat_index(motor_id))));
+                prof_utils::duration_ns(prof_utils::now() - time_last_sent_.at(motor_idx)));
   }
 
   if (motor_id.motor_id <= 0) {
@@ -393,6 +393,15 @@ void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> 
   // SPDLOG_INFO("Write (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Takes around
   // 80us SPDLOG_INFO("Send start (ms): " <<prof_utils::duration_ms(start - debug_start_) << "\t";
   // SPDLOG_INFO("Send end (ms): " <<prof_utils::duration_ms(stop - debug_start_) << "\t";
+}
+
+std::vector<int> MotorInterface::micros_since_last_read() const {
+  auto now = prof_utils::now();
+  std::vector<int> result(time_last_received_.size(), 0);
+  for (int i = 0; i < time_last_received_.size(); i++) {
+    result[i] = prof_utils::duration_us(now - time_last_received_[i]->load());
+  }
+  return result;
 }
 
 }  // namespace pupperv3

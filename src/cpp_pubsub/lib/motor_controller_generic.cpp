@@ -199,15 +199,8 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
 
   motor_interface_->write_pid_ram_to_all(
       0, 0, calibration_speed_kp, 0, MotorInterface::kDefaultIqKp, MotorInterface::kDefaultIqKi);
-
-  // DEBUG ONLY, OVERRIDING CALIBRATION
-  // loops_at_endstop.at(0) = 100;
-  // loops_at_endstop.at(1) = 100;
-  // loops_at_endstop.at(2) = 100;
-  // loops_at_endstop.at(3) = 100;
-  // loops_at_endstop.at(4) = 100;
-  // loops_at_endstop.at(5) = 100;
-  // loops_at_endstop.at(4 + 6) = 100;
+  using namespace std::chrono_literals;
+  std::this_thread::sleep_for(10ms);
 
   while (loops_at_endstop.minCoeff() < calibration_threshold) {
     if (should_stop) {
@@ -255,9 +248,11 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   // Reset PID gains
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
+  std::this_thread::sleep_for(10ms);
 
   // Set motors to zero velocity
   velocity_control(ActuatorVector::Zero(), true);
+  std::this_thread::sleep_for(10ms);
 
   SPDLOG_INFO("Finished calibration");
 }

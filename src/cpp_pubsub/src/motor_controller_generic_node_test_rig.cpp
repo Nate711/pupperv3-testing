@@ -11,7 +11,7 @@
 #include <spdlog/spdlog.h>
 constexpr int K_SERVOS = 3;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   spdlog::set_pattern("[%H:%M:%S.%e] [%^%7l%$] [%45s:%#] %^%v%$");
   rclcpp::init(argc, argv);
   float publish_rate = 200;
@@ -48,7 +48,12 @@ int main(int argc, char *argv[]) {
       publish_rate, std::move(controller), joint_names, default_position);
 
   node->startup();
-  rclcpp::spin(node);
+  try {
+    rclcpp::spin(node);
+  } catch (const pupperv3::WatchdogTriggered& e) {
+    SPDLOG_ERROR("Caught watchdog exception");
+    rclcpp::shutdown();
+  }
   SPDLOG_INFO("rclcpp done spinning");
   rclcpp::shutdown();
   SPDLOG_INFO("rclcpp shutdown");
