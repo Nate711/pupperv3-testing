@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
       position_kp, speed_kp, max_speed, endstop_positions_degs, calibration_directions,
       std::move(interface));
   auto node = std::make_shared<pupperv3::MotorControllerNode<K_SERVOS>>(
-      publish_rate, std::move(controller), joint_names, default_position, &stop);
+      publish_rate, std::move(controller), joint_names, default_position);
 
   node->startup();
   rclcpp::spin(node);

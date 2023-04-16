@@ -14,7 +14,7 @@ constexpr int K_SERVOS = 3;
 int main(int argc, char *argv[]) {
   spdlog::set_pattern("[%H:%M:%S.%e] [%^%7l%$] [%45s:%#] %^%v%$");
   rclcpp::init(argc, argv);
-  float publish_rate = 500;
+  float publish_rate = 200;
   if (argc > 1) {
     publish_rate = std::stof(argv[1]);
   }

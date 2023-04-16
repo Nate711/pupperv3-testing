@@ -171,7 +171,7 @@ void MotorInterface::read_blocking(CANChannel bus) {
     return;
   }
   if (verbose_) {
-    SPDLOG_INFO("Read Bus: {} CAN ID: {}", to_string(bus), maybe_frame->can_id);
+    SPDLOG_INFO("Read @ {}:{}", to_string(bus), maybe_frame->can_id);
   }
   parse_frame(bus, *maybe_frame);
 }
@@ -195,7 +195,7 @@ std::optional<struct can_frame> MotorInterface::read_canframe_blocking(CANChanne
   if (nbytes < 0) {
     // Continue on read timeouts
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      SPDLOG_INFO("Bus {} timed out on read", static_cast<int>(bus));
+      SPDLOG_INFO("Bus {} timed out on read", to_string(bus));
     }
     SPDLOG_ERROR("ERROR: can raw socket read");
   }
@@ -270,13 +270,14 @@ void MotorInterface::parse_frame(CANChannel bus, const struct can_frame &frame) 
 
   (*messages_received_.at(motor_flat_index(motor_id)))++;
   if (verbose_) {
-    SPDLOG_INFO("Num msgs sent before this receive: {}",
+    SPDLOG_INFO("- Bus: {} motor_id: {}", to_string(bus), motor_id.motor_id);
+    SPDLOG_INFO("- Msgs sent before this receive: {}",
                 messages_sent_since_last_receive_.at(motor_flat_index(motor_id))->load());
   }
   (*messages_sent_since_last_receive_.at(motor_flat_index(motor_id))) = 0;
   *time_last_received_.at(motor_flat_index(motor_id)) = prof_utils::now();
   if (verbose_) {
-    SPDLOG_INFO("Time since sent: {} ns",
+    SPDLOG_INFO("- Time since sent: {} ns",
                 prof_utils::duration_ns(prof_utils::now() -
                                         time_last_sent_.at(motor_flat_index(motor_id))));
   }
@@ -336,7 +337,7 @@ void MotorInterface::initialize_bus(CANChannel bus) {
   // Set timeout
   struct timeval tv;
   tv.tv_sec = kTimeoutSeconds;
-  tv.tv_usec = 0;
+  tv.tv_usec = kTimeoutMicroseconds;
   setsockopt(socket_id, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
 }
 
@@ -382,6 +383,12 @@ void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> 
   time_last_sent_[motor_flat_index(motor_id)] = prof_utils::now();
   (*messages_sent_.at(motor_flat_index(motor_id)))++;
   (*messages_sent_since_last_receive_.at(motor_flat_index(motor_id)))++;
+
+  if (verbose_) {
+    SPDLOG_INFO("Send @ {}:{}", to_string(motor_id.bus), motor_id.motor_id);
+    SPDLOG_INFO("- sent: {} received: {}", *messages_sent_.at(motor_flat_index(motor_id)),
+                *messages_received_.at(motor_flat_index(motor_id)));
+  }
 
   // SPDLOG_INFO("Write (ns): " <<prof_utils::duration_ns(stop - start) << "\t"; // Takes around
   // 80us SPDLOG_INFO("Send start (ms): " <<prof_utils::duration_ms(start - debug_start_) << "\t";

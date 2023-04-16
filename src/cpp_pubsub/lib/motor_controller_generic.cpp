@@ -181,14 +181,14 @@ template <int N>
 void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   SPDLOG_INFO("--------------- Starting calibration ---------------");
   using namespace std::chrono_literals;
-  const float velocity_target = 750;  // rotor deg/s
-  const float calibration_speed_kp = 30;
-  const float speed_threshold = 0.05;
-  const float current_threshold = 4.0;
-  const int calibration_threshold = 20;
-  const int start_averaging_ticks = 10;
-  const int averaging_ticks = calibration_threshold - start_averaging_ticks;
-  const std::chrono::duration sleep_time = 5000us;  // 2000us;
+  constexpr float velocity_target = 750;  // rotor deg/s
+  constexpr float calibration_speed_kp = 30;
+  constexpr float speed_threshold = 0.05;
+  constexpr float current_threshold = 4.0;
+  constexpr int calibration_threshold = 20;
+  constexpr int start_averaging_ticks = 10;
+  constexpr int averaging_ticks = calibration_threshold - start_averaging_ticks;
+  constexpr std::chrono::duration sleep_time = 5000us;
 
   is_robot_calibrated_ = false;
 

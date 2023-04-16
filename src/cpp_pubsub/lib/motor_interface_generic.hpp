@@ -216,7 +216,8 @@ class MotorInterface {
   static constexpr float kDegsPerTick = 0.01;
   static constexpr float kSpeedReduction = 0.1;
 
-  static constexpr int kTimeoutSeconds = 1;
+  static constexpr int kTimeoutMicroseconds = 100'000;
+  static constexpr int kTimeoutSeconds = 0;
 
   ActuatorData latest_data_;
   std::mutex latest_data_lock_;
