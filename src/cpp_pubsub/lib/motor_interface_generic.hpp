@@ -146,29 +146,73 @@ class MotorInterface {
   void close_canbuses();
   void initialize_motors();
   void request_multi_angle(const MotorID& motor_id);
+
   /* Command motor current in amps
-   * Args:
-   *   current: amps
+   * @param motor_id
+   * @param current: amps
    */
   void command_current(const MotorID& motor_id, float current);
+
   /* Command motor velocity in deg/s
-   * Args:
-   *   velocity: deg/s
+   * @param motor_id
+   * @param velocity: deg/s
    */
   void command_velocity(const MotorID& motor_id, float velocity);
+
+  /* Write PID parameters to one motor, persistent across power cycels
+   * @param motor_id
+   * @param angle_kp: Angle-mode kp
+   * @param angle_ki: Angle-mode ki
+   * @param speed_kp: Amps/(deg/s) maybe
+   * @param speed_ki: Amps/deg maybe
+   * @param iq_kp: Current loop Kp
+   * @param iq_ki: Current look ki
+   */
   void write_pid_rom(const MotorID& motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp,
                      uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
+
+  /* Write PID parameters to one motor, resets on power off
+   * @param motor_id
+   * @param angle_kp: Angle-mode kp
+   * @param angle_ki: Angle-mode ki
+   * @param speed_kp: Amps/(deg/s) maybe
+   * @param speed_ki: Amps/deg maybe
+   * @param iq_kp: Current loop Kp
+   * @param iq_ki: Current look ki
+   */
   void write_pid_ram(const MotorID& motor_id, uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp,
                      uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
+
+  /* Write PID parameters to all motors sequentially.
+   * Note: Waits 1ms between sending CAN messages
+   * @param angle_kp: Angle-mode kp
+   * @param angle_ki: Angle-mode ki
+   * @param speed_kp: Amps/(deg/s) maybe
+   * @param speed_ki: Amps/deg maybe
+   * @param iq_kp: Current loop Kp
+   * @param iq_ki: Current look ki
+   */
   void write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki,
                             uint8_t iq_kp, uint8_t iq_ki);
+
+  /* Command motor to go into stop mode
+   * @param motor_id
+   */
   void command_stop(const MotorID& motor_id);
+
+  /* Command all motors to go into stop mode */
   void command_all_stop();
+
+  /* Read messages from given bus in blocking mode */
   void read_blocking(CANChannel bus);
+
+  /* Start threads to read CAN buses */
   void start_read_threads();
+
+  /* Get a copy (thread-safe) of the data from all motors */
   ActuatorData motor_data_safe();
 
-  /* Report the latest data from the motor
+  /* Report the latest data from the specified motor
    * Multi_loop_angle: degs
    * velocity: deg/s
    * current: A
@@ -178,8 +222,11 @@ class MotorInterface {
   static const uint8_t kDefaultIqKp = 0x3C;
   static const uint8_t kDefaultIqKi = 0x28;
 
+  /* Get the actuator configuration */
   inline const ActuatorConfiguration& actuator_config() { return actuator_config_; }
 
+  /* Return a vector of integers that represent the milliseconds since last message received for the
+   * corresponding motor */
   std::vector<int> micros_since_last_read() const;
 
  private:
@@ -201,7 +248,7 @@ class MotorInterface {
   void torque_velocity_update(const MotorID& motor_id, const struct can_frame& frame);
   void update_rotation(CommonResponse& common);
 
-  std::unordered_map<CANChannel, int> canbus_to_fd_;
+  std::unordered_map<CANChannel, int> canbus_to_filedescriptor_;
   ActuatorConfiguration actuator_config_;
   bool initialized_;
   std::atomic<bool> should_read_;
@@ -223,6 +270,8 @@ class MotorInterface {
 
   ActuatorData latest_data_;
   std::mutex latest_data_lock_;
+
+  std::mutex canbus_to_filedescriptor_lock_;
 
   // keep track of long term missed messages
   std::vector<std::shared_ptr<std::atomic_int>> messages_sent_;

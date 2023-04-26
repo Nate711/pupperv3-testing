@@ -9,7 +9,7 @@
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include <spdlog/spdlog.h>
-constexpr int K_SERVOS = 3;
+constexpr int K_SERVOS = 6;
 
 int main(int argc, char* argv[]) {
   spdlog::set_pattern("[%H:%M:%S.%e] [%^%7l%$] [%45s:%#] %^%v%$");
@@ -24,7 +24,10 @@ int main(int argc, char* argv[]) {
   pupperv3::MotorID id1{pupperv3::CANChannel::CAN0, 1};
   pupperv3::MotorID id2{pupperv3::CANChannel::CAN0, 2};
   pupperv3::MotorID id3{pupperv3::CANChannel::CAN0, 3};
-  pupperv3::ActuatorConfiguration actuator_config{{id1, id2, id3}};
+  pupperv3::MotorID id4{pupperv3::CANChannel::CAN0, 4};
+  pupperv3::MotorID id5{pupperv3::CANChannel::CAN0, 5};
+  pupperv3::MotorID id6{pupperv3::CANChannel::CAN0, 6};
+  pupperv3::ActuatorConfiguration actuator_config{{id1, id2, id3, id4, id5, id6}};
 
   auto interface = std::make_unique<pupperv3::MotorInterface>(actuator_config, true);
 
@@ -34,12 +37,13 @@ int main(int argc, char* argv[]) {
   uint8_t speed_kp = 5;         // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;       // rotor deg/s
   using ActuatorVector = pupperv3::MotorController<K_SERVOS>::ActuatorVector;
-  ActuatorVector endstop_positions_degs = {-135, 90, 68};
-  ActuatorVector calibration_directions = {-1, 1, 1};
+  ActuatorVector endstop_positions_degs = {-135, 90, 68, -135, 90, 68};
+  ActuatorVector calibration_directions = {-1, 1, 1, -1, 1, 1};
   std::array<std::string, K_SERVOS> joint_names = {"leg_front_r_1", "leg_front_r_2",
-                                                   "leg_front_r_3"};
+                                                   "leg_front_r_3", "leg_front_l_1",
+                                                   "leg_front_l_2", "leg_front_l_3"};
 
-  ActuatorVector default_position = {0, 0, 1.0};
+  ActuatorVector default_position = {0, 0, 1.0, 0, 0, 1.0};
 
   auto controller = std::make_unique<pupperv3::MotorController<K_SERVOS>>(
       position_kp, speed_kp, max_speed, endstop_positions_degs, calibration_directions,
@@ -48,14 +52,15 @@ int main(int argc, char* argv[]) {
       publish_rate, std::move(controller), joint_names, default_position);
 
   node->startup();
+  // TODO: don't start watchdog until position control is going!
   try {
     rclcpp::spin(node);
   } catch (const pupperv3::WatchdogTriggered& e) {
     SPDLOG_ERROR("Caught watchdog exception");
     rclcpp::shutdown();
   }
-  SPDLOG_INFO("rclcpp done spinning");
+  SPDLOG_INFO("Rclcpp done spinning");
   rclcpp::shutdown();
-  SPDLOG_INFO("rclcpp shutdown");
+  SPDLOG_INFO("Rclcpp shutdown");
   return 0;
 }

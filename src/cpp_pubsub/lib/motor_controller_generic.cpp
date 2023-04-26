@@ -42,13 +42,14 @@ MotorController<N>::~MotorController() {
 
 template <int N>
 void MotorController<N>::begin() {
+  using namespace std::chrono_literals;
   SPDLOG_INFO("Initializing motor controller.");
-  // motor_interface_->initialize_canbuses();
-  motor_interface_->initialize_motors();
   motor_interface_->start_read_threads();
+  std::this_thread::sleep_for(10ms);
+  motor_interface_->initialize_motors();
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
-
+  std::this_thread::sleep_for(10ms);
   velocity_control(ActuatorVector::Zero(), true);
 }
 
@@ -270,7 +271,7 @@ void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, floa
   motor_interface_->write_pid_ram_to_all(0, 0, move_speed_kp, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
   // Need to wait 1ms here to prevent can bus from dying
-  std::this_thread::sleep_for(1000us);
+  std::this_thread::sleep_for(1ms);
 
   for (int ticks = 0;; ticks++) {
     position_control(goal_position, position_kp, max_speed, true);
@@ -286,10 +287,10 @@ void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, floa
   }
 
   // Reset PD gains to default
-  std::this_thread::sleep_for(1000us);
+  std::this_thread::sleep_for(1ms);
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
-  std::this_thread::sleep_for(1000us);
+  std::this_thread::sleep_for(1ms);
 
   // Set motors back to zero velocity
   velocity_control(ActuatorVector::Zero(), true);

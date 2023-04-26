@@ -66,7 +66,7 @@ void MotorInterface::initialize_canbuses() {
 void MotorInterface::close_canbuses() {
   SPDLOG_INFO("Closing CAN bus sockets...");
   for (const auto &bus : canbuses_) {
-    close(canbus_to_fd_.at(bus));
+    close(canbus_to_filedescriptor_.at(bus));
   }
   SPDLOG_INFO("Closed all CAN bus sockets.");
 }
@@ -127,8 +127,10 @@ void MotorInterface::write_pid_ram(const MotorID &motor_id, uint8_t angle_kp, ui
 
 void MotorInterface::write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp,
                                           uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki) {
+  using namespace std::chrono_literals;
   for (const auto &motor_id : actuator_config_) {
     write_pid_ram(motor_id, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
+    std::this_thread::sleep_for(1ms);
   }
 }
 
@@ -180,16 +182,16 @@ std::optional<struct can_frame> MotorInterface::read_canframe_blocking(CANChanne
   struct can_frame frame;
   memset(&frame, 0, sizeof(frame));
 
-  // Print time to get fd
-  auto start = prof_utils::now();
-  int file_descriptor = canbus_to_fd_.at(bus);
-  auto stop = prof_utils::now();
-  // SPDLOG_INFO("FD lookup (ns): " <<prof_utils::duration_ns(stop - start) << "\t";
+  // Print time to get file descriptor
+  // auto start = prof_utils::now();
+  int file_descriptor = canbus_to_filedescriptor_.at(bus);
+  // auto stop = prof_utils::now();
+  // SPDLOG_INFO("File descriptor lookup (ns): " <<prof_utils::duration_ns(stop - start) << "\t";
 
   // Print time to read from can bus
-  auto start_read = prof_utils::now();
+  // auto start_read = prof_utils::now();
   long nbytes = read(file_descriptor, &frame, sizeof(struct can_frame));
-  auto stop_read = prof_utils::now();
+  // auto stop_read = prof_utils::now();
   // SPDLOG_INFO("Read start (ms): " <<prof_utils::duration_ms(start_read - debug_start_) << "\t";
   // SPDLOG_INFO("Read end (ms): " <<prof_utils::duration_ms(stop_read - debug_start_) << "\t";
   if (nbytes < 0) {
@@ -203,7 +205,7 @@ std::optional<struct can_frame> MotorInterface::read_canframe_blocking(CANChanne
     SPDLOG_ERROR("ERROR: did not read full can frame ({} of {})", nbytes, sizeof(struct can_frame));
     return std::nullopt;
   }
-  stop = prof_utils::now();
+  // stop = prof_utils::now();
   // SPDLOG_INFO("CAN read (ns): " <<prof_utils::duration_ns(stop_read - start_read) << "\t";
   return frame;
 }
@@ -332,7 +334,7 @@ void MotorInterface::initialize_bus(CANChannel bus) {
     SPDLOG_ERROR("bind");
     throw std::runtime_error("could nto bind");
   }
-  canbus_to_fd_.insert({bus, socket_id});
+  canbus_to_filedescriptor_.insert({bus, socket_id});
 
   // Set timeout
   struct timeval tv;
@@ -344,13 +346,13 @@ void MotorInterface::initialize_bus(CANChannel bus) {
 void MotorInterface::initialize_motor(const MotorID &motor_id) {
   SPDLOG_INFO("Initializing motor id: {} on bus: {}", static_cast<int>(motor_id.motor_id),
               to_string(motor_id.bus));
-
+  using namespace std::chrono_literals;
   send(motor_id, {kStartup0, 0, 0, 0, 0, 0, 0, 0});
-  usleep(10000);
+  std::this_thread::sleep_for(1ms);
   send(motor_id, {kStartup1, 0, 0, 0, 0, 0, 0, 0});
-  usleep(10000);
+  std::this_thread::sleep_for(1ms);
   send(motor_id, {kStartup2, 0, 0, 0, 0, 0, 0, 0});
-  usleep(10000);
+  std::this_thread::sleep_for(1ms);
 }
 
 uint32_t MotorInterface::motor_id_to_can_id(uint8_t motor_id) { return 0x140 + motor_id; }
@@ -363,11 +365,16 @@ void MotorInterface::read_thread(CANChannel channel) {
   }
 }
 
-/* Only non-thread-safe part of this function is reading canbus_to_fd_.
- * However, it's array of int so probably ok */
+/* Only non-thread-safe part of this function is reading canbus_to_filedescriptor_ which is
+ * protected with lock
+ */
 void MotorInterface::send(const MotorID &motor_id, const std::array<uint8_t, 8> &payload) {
   // SPDLOG_INFO("Send can message\n";
-  int file_descriptor = canbus_to_fd_.at(motor_id.bus);
+  int file_descriptor = -1;
+  {
+    std::unique_lock<std::mutex> lock(canbus_to_filedescriptor_lock_);
+    file_descriptor = canbus_to_filedescriptor_.at(motor_id.bus);
+  }
   struct can_frame frame;
   memset(&frame, 0, sizeof(frame));
   frame.can_id = motor_id_to_can_id(motor_id.motor_id);
