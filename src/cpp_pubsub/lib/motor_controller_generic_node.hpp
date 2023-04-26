@@ -58,20 +58,8 @@ class MotorControllerNode : public rclcpp::Node {
   void joint_command_callback(pupper_interfaces::msg::JointCommand joint_command);
 
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
-  static constexpr int kWatchDogTimeoutUS = 10000;  // watchdog should be run twice this frequent
-
-  // TODO: make parameter
-  //   const std::string joint_names_[12] = {
-  //       "leg_front_r_1", "leg_front_r_2", "leg_front_r_3", "leg_front_l_1",
-  //       "leg_front_l_2", "leg_front_l_3", "leg_back_r_1",  "leg_back_r_2",
-  //       "leg_back_r_3",  "leg_back_l_1",  "leg_back_l_2",  "leg_back_l_3",
-  //   };
-  // const std::string joint_names_[K_SERVOS] = {"leg_front_r_1", "leg_front_r_2",
-  // "leg_front_r_3",
-  //                                             "leg_front_l_1", "leg_front_l_2",
-  //                                             "leg_front_l_3"};
-  // const std::string joint_names_[K_SERVOS] = {"leg_front_r_1", "leg_front_r_2",
-  // "leg_front_r_3"};
+  static constexpr int kWatchDogWarningUS = 10000;  // watchdog should be run twice as frequent
+  static constexpr int kWatchDogTimeoutUS = 100000;
   float publish_rate_;
   std::unique_ptr<MotorController<K_SERVOS>> motor_controller_;
   ActuatorVector default_position_;

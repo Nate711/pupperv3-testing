@@ -70,7 +70,7 @@ template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
   // Start watchdog with period 0.5x max timeout
   watchdog_timer_ =
-      this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogTimeoutUS * 2.0).period(),
+      this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogWarningUS * 2.0).period(),
                               std::bind(&MotorControllerNode::watchdog_callback, this));
   motor_controller_->calibrate_motors(stop_);
   motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, default_position_);
@@ -88,7 +88,6 @@ void MotorControllerNode<K_SERVOS>::joint_command_callback(
 template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::publish_callback() {
   // Must receive a joint command message to make latest_joint_command_ non-zero
-  // TODO: add watchdog
   if (latest_joint_command_.position_target.size() == 0) {
     RCLCPP_WARN(this->get_logger(), "No joint command received. Skipping control");
   } else if (latest_joint_command_.position_target.size() != K_SERVOS) {
@@ -110,7 +109,7 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
   auto efforts = motor_controller_->actuator_efforts();
 
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  SPDLOG_INFO("pos ref: {}", positions.transpose().format(CleanFmt));
+  SPDLOG_INFO("Positions: {}", positions.transpose().format(CleanFmt));
 
   for (int i = 0; i < positions.size(); i++) {
     joint_state_message_.position.at(i) = positions(i);
@@ -130,9 +129,13 @@ void MotorControllerNode<K_SERVOS>::watchdog_callback() {
 
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
   SPDLOG_INFO("Microseconds since last read: {}", latency.transpose().format(CleanFmt));
+  if (max_latency > kWatchDogWarningUS) {
+    SPDLOG_WARN("Watchdog WARNING: Latency on motor {}: {} us. Max allowed: {} us", max_idx,
+                max_latency, kWatchDogTimeoutUS);
+  }
   if (max_latency > kWatchDogTimeoutUS) {
-    SPDLOG_ERROR("Watchdog: Latency on motor {}: {} us. Max allowed: {} us", max_idx, max_latency,
-                 kWatchDogTimeoutUS);
+    SPDLOG_ERROR("Watchdog TRIGGER: Latency on motor {}: {} us. Max allowed: {} us", max_idx,
+                 max_latency, kWatchDogTimeoutUS);
     throw WatchdogTriggered("Watchdog triggered");
   }
 }

@@ -184,7 +184,7 @@ class MotorInterface {
                      uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki);
 
   /* Write PID parameters to all motors sequentially.
-   * Note: Waits 1ms between sending CAN messages
+   * Note: Waits 0.5ms between sending CAN messages
    * @param angle_kp: Angle-mode kp
    * @param angle_ki: Angle-mode ki
    * @param speed_kp: Amps/(deg/s) maybe

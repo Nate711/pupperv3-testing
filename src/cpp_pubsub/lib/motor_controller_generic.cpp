@@ -138,9 +138,9 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   velocity_command = velocity_command.cwiseMax(-max_speed).cwiseMin(max_speed);
 
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  SPDLOG_INFO("pos ref: {}", goal_positions.transpose().format(CleanFmt));
-  SPDLOG_INFO("corrected pos: {}", corrected_actuator_positions.transpose().format(CleanFmt));
-  SPDLOG_INFO("raw pos: {}", raw_actuator_positions().transpose().format(CleanFmt));
+  SPDLOG_INFO("Pos reference: {}", goal_positions.transpose().format(CleanFmt));
+  SPDLOG_INFO("Pos corrected: {}", corrected_actuator_positions.transpose().format(CleanFmt));
+  SPDLOG_INFO("Pos raw: {}", raw_actuator_positions().transpose().format(CleanFmt));
 
   velocity_control(velocity_command, override_busy);
 }
@@ -160,9 +160,6 @@ void MotorController<N>::velocity_control(const ActuatorVector &velocity_command
     SPDLOG_INFO("Ignoring velocity_control call because robot is busy");
     return;
   }
-
-  // sometimes need to call this function while not calibrated eg calibration and before
-  // calibration? throw_on_not_calibrated("velocity_control: robot not calibrated");
 
   ActuatorVector clamped_velocity_command =
       velocity_command.cwiseMax(-max_speed_).cwiseMin(max_speed_);
@@ -201,7 +198,7 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   motor_interface_->write_pid_ram_to_all(
       0, 0, calibration_speed_kp, 0, MotorInterface::kDefaultIqKp, MotorInterface::kDefaultIqKi);
   using namespace std::chrono_literals;
-  std::this_thread::sleep_for(10ms);
+  std::this_thread::sleep_for(1ms);
 
   while (loops_at_endstop.minCoeff() < calibration_threshold) {
     if (should_stop) {
@@ -216,6 +213,7 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
     auto motor_data = motor_interface_->motor_data_safe();
 
     // Iterate over each motor
+    SPDLOG_INFO("Calibration status:");
     for (size_t idx = 0; idx < N; idx++) {
       // Read data
       float output_rads = motor_data.at(idx).common.output_rads;
@@ -237,11 +235,11 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
       }
 
       // Debug printing
-      std::cout << " || v: " << output_rad_per_sec << " I: " << current
-                << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
+      std::stringstream ss;
+      ss << "Idx: " << idx << " v: " << output_rad_per_sec << " I: " << current
+         << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
+      SPDLOG_INFO("{}", ss.str());
     }
-
-    std::cout << std::endl;
     std::this_thread::sleep_for(sleep_time);
   }
   is_robot_calibrated_ = true;
@@ -249,11 +247,11 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   // Reset PID gains
   motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
-  std::this_thread::sleep_for(10ms);
+  std::this_thread::sleep_for(1ms);
 
   // Set motors to zero velocity
   velocity_control(ActuatorVector::Zero(), true);
-  std::this_thread::sleep_for(10ms);
+  std::this_thread::sleep_for(1ms);
 
   SPDLOG_INFO("Finished calibration");
 }
