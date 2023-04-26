@@ -50,11 +50,6 @@ MotorControllerNode<K_SERVOS>::MotorControllerNode(
   subscriber_ = this->create_subscription<pupper_interfaces::msg::JointCommand>(
       "/joint_commands", rclcpp::SensorDataQoS(),
       std::bind(&MotorControllerNode::joint_command_callback, this, _1));
-
-  // Start watchdog with period 0.5x max timeout
-  watchdog_timer_ =
-      this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogTimeoutUS * 2.0).period(),
-                              std::bind(&MotorControllerNode::watchdog_callback, this));
 }
 
 template <int K_SERVOS>
@@ -73,6 +68,10 @@ void MotorControllerNode<K_SERVOS>::startup() {
 
 template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
+  // Start watchdog with period 0.5x max timeout
+  watchdog_timer_ =
+      this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogTimeoutUS * 2.0).period(),
+                              std::bind(&MotorControllerNode::watchdog_callback, this));
   motor_controller_->calibrate_motors(stop_);
   motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, default_position_);
 }
