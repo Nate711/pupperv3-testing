@@ -29,6 +29,10 @@ target_link_libraries(pupperv3 spdlog::spdlog_header_only)
 add_executable(interface_test src/interface_test.cpp)
 target_link_libraries(interface_test pupperv3 gflags)
 
+add_executable(serial_test src/serial_test.cc)
+add_executable(serial_test_syscall src/serial_test_syscall.cc)
+
+
 add_executable(motor_controller_generic_calibration_test src/motor_controller_generic_calibration_test.cpp)
 target_link_libraries(motor_controller_generic_calibration_test pupperv3 gflags)
 
@@ -54,6 +58,9 @@ install(TARGETS test_rig DESTINATION lib/${PROJECT_NAME})
 install(TARGETS interface_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_generic_calibration_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS latency_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS serial_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS serial_test_syscall DESTINATION lib/${PROJECT_NAME})
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
