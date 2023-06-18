@@ -39,7 +39,7 @@ void test_command_velocity(bool verbose_interface, bool verbose) {
     auto us_since_start =
         std::chrono::duration_cast<std::chrono::microseconds>(start - now).count();
     double phase = 4 * us_since_start / 1000000.0;
-    double value = std::sin(phase) * 2000;
+    double value = std::sin(phase) * 500;
     constexpr int sleep_us = 0;
     interface.command_velocity(id1, value * 1.0);
     std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));

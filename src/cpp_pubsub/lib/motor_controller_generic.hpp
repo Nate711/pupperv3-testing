@@ -10,6 +10,16 @@
 
 namespace pupperv3 {
 
+template <class T>
+inline std::ostream &operator<<(std::ostream &os, const std::vector<T> &v) {
+  os << "[";
+  for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii) {
+    os << " " << *ii;
+  }
+  os << "]";
+  return os;
+}
+
 struct RobotNotCalibratedException : public std::exception {
   const char *what() const throw() { return "Robot not calibrated"; }
 };
@@ -23,7 +33,8 @@ class MotorController {
   MotorController(float position_kp, uint8_t speed_kp, float max_speed,
                   const ActuatorVector &endstop_positions_degs,
                   const ActuatorVector &calibration_directions,
-                  std::unique_ptr<MotorInterface> motor_interface);
+                  std::unique_ptr<MotorInterface> motor_interface,
+                  bool print_position_debug = false, bool print_sent_receive = false);
   ~MotorController();
   void begin();
   void stop();
@@ -96,5 +107,8 @@ class MotorController {
 
   // Blocking moves set busy to true to prevent other control actions from taking place
   std::atomic<bool> busy_;
+
+  bool print_position_debug_;
+  bool print_sent_received_;
 };
 }  // namespace pupperv3

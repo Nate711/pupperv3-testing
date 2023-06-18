@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include "math.h"
 
@@ -10,18 +11,28 @@
 
 namespace pupperv3 {
 
+void print_sent_received_debug(const MotorInterface &interface) {
+  std::stringstream ss;
+  ss << "Sent: " << interface.send_counts() << " Received: " << interface.receive_counts()
+     << " Missing resp: " << interface.missing_reply_counts();
+  SPDLOG_INFO("{}", ss.str());
+}
+
 template <int N>
 MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float max_speed,
                                     const ActuatorVector &endstop_positions_degs,
                                     const ActuatorVector &calibration_directions,
-                                    std::unique_ptr<MotorInterface> motor_interface)
+                                    std::unique_ptr<MotorInterface> motor_interface,
+                                    bool print_position_debug, bool print_sent_received)
     : motor_interface_(std::move(motor_interface)),
       position_kp_(position_kp),
       speed_kp_(speed_kp),
       max_speed_(max_speed),
       calibration_directions_(calibration_directions),
       is_robot_calibrated_(false),
-      busy_(false) {
+      busy_(false),
+      print_position_debug_(print_position_debug),
+      print_sent_received_(print_sent_received) {
   if (motor_interface_->actuator_config().size() != N) {
     // Exceptions call object destructors except if thrown in constructor
     motor_interface_.reset();
@@ -137,12 +148,18 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   // Clip velocity commands (unncessary except for printing bc do it in velocity_control)
   velocity_command = velocity_command.cwiseMax(-max_speed).cwiseMin(max_speed);
 
-  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  SPDLOG_INFO("Pos reference: {}", goal_positions.transpose().format(CleanFmt));
-  SPDLOG_INFO("Pos corrected: {}", corrected_actuator_positions.transpose().format(CleanFmt));
-  SPDLOG_INFO("Pos raw: {}", raw_actuator_positions().transpose().format(CleanFmt));
-
   velocity_control(velocity_command, override_busy);
+
+  if (print_position_debug_) {
+    Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+    SPDLOG_INFO("Pos reference: {}", goal_positions.transpose().format(CleanFmt));
+    SPDLOG_INFO("Pos corrected: {}", corrected_actuator_positions.transpose().format(CleanFmt));
+    SPDLOG_INFO("Pos raw: {}", raw_actuator_positions().transpose().format(CleanFmt));
+  }
+
+  if (print_sent_received_) {
+    print_sent_received_debug(*motor_interface_);
+  }
 }
 
 /* Command velocity
@@ -166,6 +183,7 @@ void MotorController<N>::velocity_control(const ActuatorVector &velocity_command
   for (size_t i = 0; i < N; i++) {
     motor_interface_->command_velocity(motor_interface_->actuator_config().at(i),
                                        clamped_velocity_command(i));
+    std::this_thread::sleep_for(std::chrono::microseconds(200));
   }
 }
 
@@ -186,7 +204,7 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   constexpr int calibration_threshold = 20;
   constexpr int start_averaging_ticks = 10;
   constexpr int averaging_ticks = calibration_threshold - start_averaging_ticks;
-  constexpr std::chrono::duration sleep_time = 5000us;
+  constexpr std::chrono::duration sleep_time = 5000us;  // 200hz calibration loop
 
   is_robot_calibrated_ = false;
 
@@ -199,7 +217,6 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
       0, 0, calibration_speed_kp, 0, MotorInterface::kDefaultIqKp, MotorInterface::kDefaultIqKi);
   using namespace std::chrono_literals;
   std::this_thread::sleep_for(1ms);
-
   while (loops_at_endstop.minCoeff() < calibration_threshold) {
     if (should_stop) {
       SPDLOG_WARN("-- Stopping calibration prematurely --");
@@ -213,7 +230,7 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
     auto motor_data = motor_interface_->motor_data_safe();
 
     // Iterate over each motor
-    SPDLOG_INFO("Calibration status:");
+    // SPDLOG_INFO("Calibration status:");
     for (size_t idx = 0; idx < N; idx++) {
       // Read data
       float output_rads = motor_data.at(idx).common.output_rads;
@@ -238,7 +255,10 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
       std::stringstream ss;
       ss << "Idx: " << idx << " v: " << output_rad_per_sec << " I: " << current
          << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
-      SPDLOG_INFO("{}", ss.str());
+      // SPDLOG_INFO("{}", ss.str());
+    }
+    if (print_sent_received_) {
+      print_sent_received_debug(*motor_interface_);
     }
     std::this_thread::sleep_for(sleep_time);
   }
@@ -263,14 +283,13 @@ void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, floa
   SPDLOG_INFO("--------------- Starting blocking move-----------");
   set_busy();
   using namespace std::chrono_literals;
-  auto sleep_time = 5000us;
+  auto sleep_time = 5000us;  // 200hz
 
   // Set special blocking move gains
   motor_interface_->write_pid_ram_to_all(0, 0, move_speed_kp, 0, MotorInterface::kDefaultIqKp,
                                          MotorInterface::kDefaultIqKi);
   // Need to wait 1ms here to prevent can bus from dying
   std::this_thread::sleep_for(1ms);
-
   for (int ticks = 0;; ticks++) {
     position_control(goal_position, position_kp, max_speed, true);
     std::this_thread::sleep_for(sleep_time);
@@ -281,6 +300,9 @@ void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, floa
     if ((actuator_velocities().template lpNorm<Eigen::Infinity>() < speed_tolerance) &&
         (ticks > wait_ticks)) {
       break;
+    }
+    if (print_sent_received_) {
+      print_sent_received_debug(*motor_interface_);
     }
   }
 

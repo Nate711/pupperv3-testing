@@ -230,6 +230,8 @@ class MotorInterface {
   std::vector<int> micros_since_last_read() const;
 
   std::vector<int> receive_counts() const;
+  std::vector<int> send_counts() const;
+  std::vector<int> missing_reply_counts() const;
 
  private:
   void initialize_bus(CANChannel bus);

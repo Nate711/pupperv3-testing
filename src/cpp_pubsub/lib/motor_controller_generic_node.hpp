@@ -33,7 +33,8 @@ class MotorControllerNode : public rclcpp::Node {
   using ActuatorVector = typename MotorController<K_SERVOS>::ActuatorVector;
   MotorControllerNode(float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller,
                       const std::array<std::string, K_SERVOS>& joint_names,
-                      const ActuatorVector& default_position);
+                      const ActuatorVector& default_position, bool verbose = false,
+                      bool very_verbose = false);
   ~MotorControllerNode();
   void startup();
 
@@ -66,5 +67,8 @@ class MotorControllerNode : public rclcpp::Node {
   pupper_interfaces::msg::JointCommand latest_joint_command_;
   std::thread startup_thread_;
   std::atomic<bool> stop_;
+
+  bool verbose_;
+  bool very_verbose_;
 };
 }  // namespace pupperv3

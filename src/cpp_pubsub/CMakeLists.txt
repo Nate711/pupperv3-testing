@@ -17,6 +17,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pupper_interfaces REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(gflags)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # Libraries
@@ -42,11 +43,11 @@ target_link_libraries(motor_controller_generic_calibration_test pupperv3 gflags)
 # ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
 
 add_executable(motor_controller_generic_node_test src/motor_controller_generic_node_test.cpp lib/motor_controller_generic_node.cpp)
-target_link_libraries(motor_controller_generic_node_test pupperv3)
+target_link_libraries(motor_controller_generic_node_test pupperv3 gflags)
 ament_target_dependencies(motor_controller_generic_node_test rclcpp pupper_interfaces std_msgs sensor_msgs)
 
 add_executable(test_rig src/motor_controller_generic_node_test_rig.cpp lib/motor_controller_generic_node.cpp)
-target_link_libraries(test_rig pupperv3)
+target_link_libraries(test_rig pupperv3 gflags)
 ament_target_dependencies(test_rig rclcpp pupper_interfaces std_msgs sensor_msgs)
 
 add_executable(latency_test src/latency_test.cpp)

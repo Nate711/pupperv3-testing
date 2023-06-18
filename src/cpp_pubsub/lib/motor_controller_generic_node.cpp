@@ -24,12 +24,15 @@ namespace pupperv3 {
 template <int K_SERVOS>
 MotorControllerNode<K_SERVOS>::MotorControllerNode(
     float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller,
-    const std::array<std::string, K_SERVOS>& joint_names, const ActuatorVector& default_position)
+    const std::array<std::string, K_SERVOS>& joint_names, const ActuatorVector& default_position,
+    bool verbose, bool very_verbose)
     : Node("motor_controller_node"),
       publish_rate_(rate),
       motor_controller_(std::move(motor_controller)),
       default_position_(default_position),
-      stop_(false) {
+      stop_(false),
+      verbose_(verbose),
+      very_verbose_(very_verbose) {
   // CAN interface setup
   motor_controller_->begin();
   SPDLOG_INFO("Began motor controller.");
@@ -81,7 +84,9 @@ void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
 template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::joint_command_callback(
     pupper_interfaces::msg::JointCommand joint_command) {
-  RCLCPP_INFO(this->get_logger(), "GOT JOINT COMMAND");
+  if (very_verbose_) {
+    RCLCPP_INFO(this->get_logger(), "Received joint command");
+  }
   latest_joint_command_ = joint_command;
 }
 
@@ -102,14 +107,17 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
     RCLCPP_WARN(this->get_logger(), "Motor controller not calibrated");
   }
 
-  RCLCPP_INFO(this->get_logger(), "Publishing joint states");
   joint_state_message_.header.stamp = now();
   auto positions = motor_controller_->actuator_positions();
   auto velocities = motor_controller_->actuator_velocities();
   auto efforts = motor_controller_->actuator_efforts();
 
-  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  SPDLOG_INFO("Positions: {}", positions.transpose().format(CleanFmt));
+  if (very_verbose_) {
+    Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+    std::ostringstream ss;
+    ss << "Publishing joint states. Positions=" << positions.transpose().format(CleanFmt);
+    RCLCPP_INFO(this->get_logger(), ss.str().c_str());
+  }
 
   for (int i = 0; i < positions.size(); i++) {
     joint_state_message_.position.at(i) = positions(i);
@@ -118,6 +126,12 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
     joint_state_message_.effort.at(i) = efforts(i);
   }
   publisher_->publish(joint_state_message_);
+
+  if (verbose_) {
+    Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+    SPDLOG_INFO("Microseconds since last read: {}",
+                motor_controller_->micros_since_last_read().transpose().format(CleanFmt));
+  }
 }
 
 template <int K_SERVOS>
@@ -127,8 +141,6 @@ void MotorControllerNode<K_SERVOS>::watchdog_callback() {
   int max_idx;
   latency.maxCoeff(&max_idx);
 
-  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  SPDLOG_INFO("Microseconds since last read: {}", latency.transpose().format(CleanFmt));
   if (max_latency > kWatchDogWarningUS) {
     SPDLOG_WARN("Watchdog WARNING: Latency on motor {}: {} us. Max allowed: {} us", max_idx,
                 max_latency, kWatchDogTimeoutUS);

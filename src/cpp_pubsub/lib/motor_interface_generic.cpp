@@ -414,8 +414,24 @@ std::vector<int> MotorInterface::micros_since_last_read() const {
 
 std::vector<int> MotorInterface::receive_counts() const {
   std::vector<int> result;
-  for (std::shared_ptr<std::atomic_int> count : messages_received_) {
+  for (auto count : messages_received_) {
     result.push_back(*count);
+  }
+  return result;
+}
+
+std::vector<int> MotorInterface::send_counts() const {
+  std::vector<int> result;
+  for (auto count : messages_sent_) {
+    result.push_back(*count);
+  }
+  return result;
+}
+
+std::vector<int> MotorInterface::missing_reply_counts() const {
+  std::vector<int> result;
+  for (int i = 0; i < messages_received_.size(); i++) {
+    result.push_back(*messages_sent_.at(i) - *messages_received_.at(i));
   }
   return result;
 }

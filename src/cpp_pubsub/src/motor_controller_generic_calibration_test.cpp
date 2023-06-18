@@ -1,4 +1,5 @@
 #include <math.h>
+#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -18,7 +19,7 @@ void sigint_handler(sig_atomic_t signal) {
 }
 
 int main(int argc, char *argv[]) {
-  // Boilerplate
+  spdlog::set_pattern("[%H:%M:%S.%e] [%^%7l%$] [%35s:%#] %^%v%$");
   signal(SIGINT, sigint_handler);
 
   using ActuatorVector = pupperv3::MotorController<N_ACTUATORS>::ActuatorVector;
