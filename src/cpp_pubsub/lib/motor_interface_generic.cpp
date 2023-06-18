@@ -412,4 +412,12 @@ std::vector<int> MotorInterface::micros_since_last_read() const {
   return result;
 }
 
+std::vector<int> MotorInterface::receive_counts() const {
+  std::vector<int> result;
+  for (std::shared_ptr<std::atomic_int> count : messages_received_) {
+    result.push_back(*count);
+  }
+  return result;
+}
+
 }  // namespace pupperv3

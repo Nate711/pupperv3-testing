@@ -229,6 +229,8 @@ class MotorInterface {
    * corresponding motor */
   std::vector<int> micros_since_last_read() const;
 
+  std::vector<int> receive_counts() const;
+
  private:
   void initialize_bus(CANChannel bus);
   void initialize_motor(const MotorID& motor_id);
