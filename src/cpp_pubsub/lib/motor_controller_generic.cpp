@@ -183,7 +183,7 @@ void MotorController<N>::velocity_control(const ActuatorVector &velocity_command
   for (size_t i = 0; i < N; i++) {
     motor_interface_->command_velocity(motor_interface_->actuator_config().at(i),
                                        clamped_velocity_command(i));
-    std::this_thread::sleep_for(std::chrono::microseconds(200));
+    std::this_thread::sleep_for(std::chrono::microseconds(kDelayAfterCommand));
   }
 }
 
@@ -246,16 +246,21 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
       // Check if number of ticks at the endstop has been reached
       if (loops_at_endstop(idx) >= calibration_threshold) {
         command_velocities(idx) = 0.0;
+        if (print_position_debug_) {
+          SPDLOG_INFO("Motor {} done.", idx);
+        }
       }  // Start average position at endstop after a few ticks at the endstop
       else if (loops_at_endstop(idx) >= start_averaging_ticks) {
         measured_endstop_positions_(idx) += output_rads / averaging_ticks;
       }
 
       // Debug printing
-      std::stringstream ss;
-      ss << "Idx: " << idx << " v: " << output_rad_per_sec << " I: " << current
-         << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
-      // SPDLOG_INFO("{}", ss.str());
+      if (print_position_debug_) {
+        std::stringstream ss;
+        ss << "Idx: " << idx << " v: " << output_rad_per_sec << " I: " << current
+           << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
+        SPDLOG_INFO("{}", ss.str());
+      }
     }
     if (print_sent_received_) {
       print_sent_received_debug(*motor_interface_);
@@ -313,6 +318,8 @@ void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, floa
   std::this_thread::sleep_for(1ms);
 
   // Set motors back to zero velocity
+  velocity_control(ActuatorVector::Zero(), true);
+  std::this_thread::sleep_for(5ms);
   velocity_control(ActuatorVector::Zero(), true);
 
   // Unblock robot controller

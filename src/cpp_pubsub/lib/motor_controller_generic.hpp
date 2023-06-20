@@ -94,6 +94,8 @@ class MotorController {
    */
   ActuatorVector raw_actuator_positions();
 
+  static constexpr int kDelayAfterCommand = 200;
+
   std::mutex motor_interface_lock_;
   std::unique_ptr<MotorInterface> motor_interface_;
   size_t num_can_buses_;

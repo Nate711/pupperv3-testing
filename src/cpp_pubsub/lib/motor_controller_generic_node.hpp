@@ -31,6 +31,13 @@ template <int K_SERVOS>
 class MotorControllerNode : public rclcpp::Node {
  public:
   using ActuatorVector = typename MotorController<K_SERVOS>::ActuatorVector;
+  /// @brief
+  /// @param rate Rate at which to publish joint state messages and to send CAN commands to motors
+  /// @param motor_controller Unique ptr to motor controller object
+  /// @param joint_names Joint names
+  /// @param default_position
+  /// @param verbose
+  /// @param very_verbose
   MotorControllerNode(float rate, std::unique_ptr<MotorController<K_SERVOS>> motor_controller,
                       const std::array<std::string, K_SERVOS>& joint_names,
                       const ActuatorVector& default_position, bool verbose = false,
@@ -60,7 +67,7 @@ class MotorControllerNode : public rclcpp::Node {
 
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
   static constexpr int kWatchDogWarningUS = 10000;  // watchdog should be run twice as frequent
-  static constexpr int kWatchDogTimeoutUS = 100000;
+  static constexpr int kWatchDogTimeoutUS = 50000;
   float publish_rate_;
   std::unique_ptr<MotorController<K_SERVOS>> motor_controller_;
   ActuatorVector default_position_;
