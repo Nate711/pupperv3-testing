@@ -225,6 +225,9 @@ class MotorInterface {
   /* Get the actuator configuration */
   inline const ActuatorConfiguration& actuator_config() { return actuator_config_; }
 
+  /* Get the actuator configuration */
+  inline const ActuatorConfiguration& actuator_config(int i) { return actuator_config_.at(i); }
+
   /* Return a vector of integers that represent the milliseconds since last message received for the
    * corresponding motor */
   std::vector<int> micros_since_last_read() const;

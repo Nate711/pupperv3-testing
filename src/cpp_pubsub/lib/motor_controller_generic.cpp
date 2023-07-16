@@ -162,6 +162,22 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
   }
 }
 
+/// @brief Command velocity of single motor
+/// @tparam N
+/// @param motor_id
+/// @param velocity
+template <int N>
+void MotorController<N>::velocity_control_single_motor(int motor_index, double velocity) {
+  if (is_busy() && !override_busy) {
+    SPDLOG_INFO("Ignoring single-motor velocity_control call because robot is busy");
+    return;
+  }
+  double clamped_velocity_command = std::min(std::max(velocity, -max_speed_), max_speed_);
+  motor_interface_->command_velocity(motor_interface_->actuator_config(i),
+                                     clamped_velocity_commands);
+  std::this_thread::sleep_for(std::chrono::microseconds(kDelayAfterCommand));
+}
+
 /* Command velocity
  *
  * TODO(nathankau): Bug if multiple blocking_move() are called from different threads
@@ -181,7 +197,7 @@ void MotorController<N>::velocity_control(const ActuatorVector &velocity_command
   ActuatorVector clamped_velocity_command =
       velocity_command.cwiseMax(-max_speed_).cwiseMin(max_speed_);
   for (size_t i = 0; i < N; i++) {
-    motor_interface_->command_velocity(motor_interface_->actuator_config().at(i),
+    motor_interface_->command_velocity(motor_interface_->actuator_config(i),
                                        clamped_velocity_command(i));
     std::this_thread::sleep_for(std::chrono::microseconds(kDelayAfterCommand));
   }
@@ -192,7 +208,6 @@ bool MotorController<N>::is_calibrated() {
   return is_robot_calibrated_;
 }
 
-// TODO: store calibration result position somewhere
 template <int N>
 void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   SPDLOG_INFO("--------------- Starting calibration ---------------");
@@ -208,65 +223,24 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
 
   is_robot_calibrated_ = false;
 
-  ActuatorVectorI loops_at_endstop = ActuatorVectorI::Zero();
-  ActuatorVector command_velocities = ActuatorVector::Zero();
-  measured_endstop_positions_ = ActuatorVector::Zero();
-  command_velocities = velocity_target * calibration_directions_;
-
-  motor_interface_->write_pid_ram_to_all(
-      0, 0, calibration_speed_kp, 0, MotorInterface::kDefaultIqKp, MotorInterface::kDefaultIqKi);
-  using namespace std::chrono_literals;
-  std::this_thread::sleep_for(1ms);
-  while (loops_at_endstop.minCoeff() < calibration_threshold) {
-    if (should_stop) {
-      SPDLOG_WARN("-- Stopping calibration prematurely --");
-      break;
-    }
-
-    // Command motors
-    velocity_control(command_velocities, true);
-
-    // Get latest data from motors in thread-safe way
-    auto motor_data = motor_interface_->motor_data_safe();
-
-    // Iterate over each motor
-    // SPDLOG_INFO("Calibration status:");
-    for (size_t idx = 0; idx < N; idx++) {
-      // Read data
-      float output_rads = motor_data.at(idx).common.output_rads;
-      float output_rad_per_sec = motor_data.at(idx).common.output_rads_per_sec;
-      float current = motor_data.at(idx).common.current;
-
-      // Check if at endstop
-      if ((std::abs(output_rad_per_sec) < speed_threshold) &&
-          (std::abs(current) > current_threshold)) {
-        loops_at_endstop(idx) += 1;
-      }
-
-      // Check if number of ticks at the endstop has been reached
-      if (loops_at_endstop(idx) >= calibration_threshold) {
-        command_velocities(idx) = 0.0;
-        if (print_position_debug_) {
-          SPDLOG_INFO("Motor {} done.", idx);
-        }
-      }  // Start average position at endstop after a few ticks at the endstop
-      else if (loops_at_endstop(idx) >= start_averaging_ticks) {
-        measured_endstop_positions_(idx) += output_rads / averaging_ticks;
-      }
-
-      // Debug printing
-      if (print_position_debug_) {
-        std::stringstream ss;
-        ss << "Idx: " << idx << " v: " << output_rad_per_sec << " I: " << current
-           << " ticks: " << loops_at_endstop(idx) << " v*: " << command_velocities(idx);
-        SPDLOG_INFO("{}", ss.str());
-      }
-    }
-    if (print_sent_received_) {
-      print_sent_received_debug(*motor_interface_);
-    }
-    std::this_thread::sleep_for(sleep_time);
+  // Spin off async tasks to calibrate motors
+  std::vector<std::future<float>> measured_endstop_position_futures;
+  for (int i = 0; i < N; i++) {
+    float calibration_velocity = velocity_target * calibration_directions_(i);
+    measured_endstop_position_futures.emplace_back(
+        std::async(&MotorController<N>::calibrate_motor, this, std::ref(should_stop), i,
+                   calibration_velocity, calibration_speed_kp, speed_threshold, current_threshold,
+                   calibration_threshold, start_averaging_ticks, averaging_ticks, sleep_time));
   }
+
+  // Can calibrate motors one at a time or concurrently depending on when you create the future and
+  // when you get it
+
+  // Wait for calibrations to complete
+  for (int i = 0; i < N; i++) {
+    measured_endstop_positions_(i) = calibration_futures[i].get();
+  }
+
   is_robot_calibrated_ = true;
 
   // Reset PID gains
@@ -280,6 +254,76 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
 
   SPDLOG_INFO("Finished calibration");
 }
+
+template <int N>
+float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, int motor_index,
+                                          float calibration_velocity, float calibration_speed_kp,
+                                          float speed_threshold, float current_threshold,
+                                          int calibration_threshold, int start_averaging_ticks,
+                                          int averaging_ticks, std::chrono::duration sleep_time) {
+  using namespace std::chrono_literals;
+
+  int loops_at_endstop = 0;
+  float command_velocity = 0.0;
+  float measured_endstop_position = 0.0;
+  command_velocity = calibration_velocity;
+
+  MotorID motor_id = motor_interface_->actuator_config(motor_index);  // 0-indexed
+  motor_interface_->write_pid_ram(motor_id, 0, 0, calibration_speed_kp, 0,
+                                  MotorInterface::kDefaultIqKp, MotorInterface::kDefaultIqKi);
+  std::this_thread::sleep_for(1ms);
+
+  while (loops_at_endstop < calibration_threshold) {
+    if (should_stop) {
+      SPDLOG_WARN("-- Stopping calibration prematurely --");
+      break;
+    }
+
+    // Command motor
+    velocity_control_single_motor(motor_index, command_velocity, true);
+
+    // Get latest data from the motor in a thread-safe way
+    auto motor_data = motor_interface_->motor_data_safe().at(motor_index).common;
+
+    // Read data
+    float output_rads = motor_data.output_rads;
+    float output_rad_per_sec = motor_data.output_rads_per_sec;
+    float current = motor_data.current;
+
+    // Check if at endstop
+    if ((std::abs(output_rad_per_sec) < speed_threshold) &&
+        (std::abs(current) > current_threshold)) {
+      loops_at_endstop += 1;
+    }
+
+    // Check if the number of ticks at the endstop has been reached
+    if (loops_at_endstop >= calibration_threshold) {
+      command_velocity = 0.0;
+      if (print_position_debug_) {
+        SPDLOG_INFO("Motor {} done.", motor_index);
+      }
+    }
+    // Start averaging position at endstop after a few ticks at the endstop
+    else if (loops_at_endstop >= start_averaging_ticks) {
+      measured_endstop_position += output_rads / averaging_ticks;
+    }
+
+    // Debug printing
+    if (print_position_debug_) {
+      std::stringstream ss;
+      ss << "Idx: " << motor_index << " v: " << output_rad_per_sec << " I: " << current
+         << " ticks: " << loops_at_endstop << " v*: " << command_velocity;
+      SPDLOG_INFO("{}", ss.str());
+    }
+
+    if (print_sent_received_) {
+      print_sent_received_debug(*motor_interface_);
+    }
+    std::this_thread::sleep_for(sleep_time);
+  }
+  return measured_endstop_position;
+}
+
 template <int N>
 void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, float max_speed,
                                        float position_kp, uint8_t move_speed_kp,

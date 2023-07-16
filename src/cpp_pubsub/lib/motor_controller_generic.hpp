@@ -43,6 +43,8 @@ class MotorController {
   void position_control(const ActuatorVector &goal_positions, float position_kp, float max_speed,
                         bool override_busy);
 
+  void velocity_control_single_motor(int motor_index, double velocity);
+
   // WARNING: UNTESTED
   void velocity_control(const ActuatorVector &vel_targets, bool override_busy = false);
 
@@ -67,7 +69,47 @@ class MotorController {
 
   bool is_calibrated();
 
-  void calibrate_motors(const std::atomic<bool> &should_stop);
+  /**
+   * @brief Calibrates all motors one by one.
+   *
+   * This function calibrates all the motors one by one. Each motor is calibrated
+   * independently until it reaches the endstop position. The calibration process
+   * sets the desired velocity, monitors the motor's position and current, and stops
+   * when the motor reaches the endstop condition.
+   *
+   * @param should_stop A reference to an atomic boolean variable that indicates
+   *                    whether the calibration process should be stopped prematurely.
+   * @return void
+   */
+  void calibrate_motors(const std::atomic_bool &should_stop);
+
+  /**
+   * @brief Calibrates a specific motor.
+   *
+   * This function calibrates a specific motor identified by its index. The calibration
+   * process sets the desired velocity for the motor, monitors its position and current,
+   * and stops when the motor reaches the endstop condition.
+   *
+   * @param should_stop A reference to an atomic boolean variable that indicates
+   *                    whether the calibration process should be stopped prematurely.
+   * @param motor_index The index of the motor to be calibrated (0-based index).
+   * @param calibration_velocity The velocity (sign and magnitude) that the motor will rotate at in
+   * rotor degrees per second.
+   * @param calibration_speed_kp The proportional gain for the calibration speed PID.
+   * @param speed_threshold The threshold for the motor speed to detect endstop condition.
+   * @param current_threshold The threshold for the motor current to detect endstop condition.
+   * @param calibration_threshold The number of ticks needed to detect the endstop condition.
+   * @param start_averaging_ticks The number of ticks before starting to average the endstop
+   * position.
+   * @param averaging_ticks The number of ticks used to average the endstop position.
+   * @param sleep_time The sleep time between calibration iterations (calibration loop frequency).
+   * @return void
+   */
+  void calibrate_motor(const std::atomic_bool &should_stop, int motor_index,
+                       float calibration_velocity, float calibration_speed_kp,
+                       float speed_threshold, float current_threshold, int calibration_threshold,
+                       int start_averaging_ticks, int averaging_ticks,
+                       std::chrono::duration sleep_time);
 
   inline bool is_busy() { return busy_; }
 

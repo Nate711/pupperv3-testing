@@ -122,16 +122,16 @@ void MotorInterface::write_pid_rom(const MotorID &motor_id, uint8_t angle_kp, ui
 void MotorInterface::write_pid_ram(const MotorID &motor_id, uint8_t angle_kp, uint8_t angle_ki,
                                    uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp,
                                    uint8_t iq_ki) {
+  using namespace std::chrono_literals;
+  std::this_thread::sleep_for(250us);
   send(motor_id, pid_message(kWritePIDToRAM, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki));
+  std::this_thread::sleep_for(250us);
 }
 
 void MotorInterface::write_pid_ram_to_all(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp,
                                           uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki) {
-  using namespace std::chrono_literals;
-  std::this_thread::sleep_for(500us);
   for (const auto &motor_id : actuator_config_) {
     write_pid_ram(motor_id, angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
-    std::this_thread::sleep_for(500us);
   }
 }
 
