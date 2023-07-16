@@ -1,6 +1,7 @@
 #include "motor_controller_generic.hpp"
 
 #include <algorithm>
+#include <future>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -167,14 +168,15 @@ void MotorController<N>::position_control(const ActuatorVector &goal_positions, 
 /// @param motor_id
 /// @param velocity
 template <int N>
-void MotorController<N>::velocity_control_single_motor(int motor_index, double velocity) {
+void MotorController<N>::velocity_control_single_motor(int motor_index, float velocity,
+                                                       bool override_busy) {
   if (is_busy() && !override_busy) {
     SPDLOG_INFO("Ignoring single-motor velocity_control call because robot is busy");
     return;
   }
   double clamped_velocity_command = std::min(std::max(velocity, -max_speed_), max_speed_);
-  motor_interface_->command_velocity(motor_interface_->actuator_config(i),
-                                     clamped_velocity_commands);
+  motor_interface_->command_velocity(motor_interface_->actuator_config(motor_index),
+                                     clamped_velocity_command);
   std::this_thread::sleep_for(std::chrono::microseconds(kDelayAfterCommand));
 }
 
@@ -196,7 +198,7 @@ void MotorController<N>::velocity_control(const ActuatorVector &velocity_command
 
   ActuatorVector clamped_velocity_command =
       velocity_command.cwiseMax(-max_speed_).cwiseMin(max_speed_);
-  for (size_t i = 0; i < N; i++) {
+  for (int i = 0; i < N; i++) {
     motor_interface_->command_velocity(motor_interface_->actuator_config(i),
                                        clamped_velocity_command(i));
     std::this_thread::sleep_for(std::chrono::microseconds(kDelayAfterCommand));
@@ -219,7 +221,7 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
   constexpr int calibration_threshold = 20;
   constexpr int start_averaging_ticks = 10;
   constexpr int averaging_ticks = calibration_threshold - start_averaging_ticks;
-  constexpr std::chrono::duration sleep_time = 5000us;  // 200hz calibration loop
+  constexpr std::chrono::microseconds sleep_time = 5000us;  // 200hz calibration loop
 
   is_robot_calibrated_ = false;
 
@@ -238,7 +240,7 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
 
   // Wait for calibrations to complete
   for (int i = 0; i < N; i++) {
-    measured_endstop_positions_(i) = calibration_futures[i].get();
+    measured_endstop_positions_(i) = measured_endstop_position_futures[i].get();
   }
 
   is_robot_calibrated_ = true;
@@ -260,7 +262,8 @@ float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, i
                                           float calibration_velocity, float calibration_speed_kp,
                                           float speed_threshold, float current_threshold,
                                           int calibration_threshold, int start_averaging_ticks,
-                                          int averaging_ticks, std::chrono::duration sleep_time) {
+                                          int averaging_ticks,
+                                          std::chrono::microseconds sleep_time) {
   using namespace std::chrono_literals;
 
   int loops_at_endstop = 0;
