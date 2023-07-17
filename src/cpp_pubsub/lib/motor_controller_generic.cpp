@@ -4,6 +4,7 @@
 #include <future>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <thread>
 #include "math.h"
 
@@ -45,6 +46,9 @@ MotorController<N>::MotorController(float position_kp, uint8_t speed_kp, float m
   }
   measured_endstop_positions_ = ActuatorVector::Zero();
   endstop_positions_ = endstop_positions_degs * M_PI / 180.0F;
+
+  // Set calibrated_motors_ to have size N and value false
+  calibrated_motors_ = std::vector<bool>(N, false);
 }
 
 template <int N>
@@ -212,74 +216,98 @@ bool MotorController<N>::is_calibrated() {
 
 template <int N>
 void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop) {
+  calibrate_motors(should_stop, kDefaultCalibrationParams);
+}
+
+// A function that prints out with spdlog the elements of a vector using ssstream
+template <typename T>
+void log_vector(const std::vector<T> &vec) {
+  std::stringstream ss;
+  ss << "[";
+  for (const auto &i : vec) {
+    ss << i << " ";
+  }
+  ss << "]";
+  SPDLOG_INFO(ss.str());
+}
+
+template <int N>
+void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop,
+                                          std::vector<int> motors_to_calibrate,
+                                          const CalibrationParams &params) {
   SPDLOG_INFO("--------------- Starting calibration ---------------");
+  log_vector(motors_to_calibrate);
+
   using namespace std::chrono_literals;
-  constexpr float velocity_target = 750;  // rotor deg/s
-  constexpr float calibration_speed_kp = 30;
-  constexpr float speed_threshold = 0.05;
-  constexpr float current_threshold = 4.0;
-  constexpr int calibration_threshold = 20;
-  constexpr int start_averaging_ticks = 10;
-  constexpr int averaging_ticks = calibration_threshold - start_averaging_ticks;
-  constexpr std::chrono::microseconds sleep_time = 5000us;  // 200hz calibration loop
 
   is_robot_calibrated_ = false;
+  for (int i : motors_to_calibrate) {
+    calibrated_motors_.at(i) = false;
+  }
 
   // Spin off async tasks to calibrate motors
   std::vector<std::future<float>> measured_endstop_position_futures;
-  for (int i = 0; i < N; i++) {
-    float calibration_velocity = velocity_target * calibration_directions_(i);
+  for (int i : motors_to_calibrate) {
     measured_endstop_position_futures.emplace_back(
-        std::async(&MotorController<N>::calibrate_motor, this, std::ref(should_stop), i,
-                   calibration_velocity, calibration_speed_kp, speed_threshold, current_threshold,
-                   calibration_threshold, start_averaging_ticks, averaging_ticks, sleep_time));
+        std::async(&MotorController<N>::calibrate_motor, this, std::ref(should_stop), i, params));
   }
 
-  // Can calibrate motors one at a time or concurrently depending on when you create the future and
-  // when you get it
-
-  // Wait for calibrations to complete
-  for (int i = 0; i < N; i++) {
-    measured_endstop_positions_(i) = measured_endstop_position_futures[i].get();
+  // Wait for calibrations to complete. Careful about indexing measured enstop positions
+  // because they are not in the same order as motors_to_calibrate
+  for (size_t i = 0; i < motors_to_calibrate.size(); i++) {
+    int motor_index = motors_to_calibrate[i];
+    measured_endstop_positions_(motor_index) = measured_endstop_position_futures[i].get();
+    calibrated_motors_.at(motor_index) = true;
   }
+
+  // Command motors which were calibrated to zero speed
+  for (int i : motors_to_calibrate) {
+    velocity_control_single_motor(i, 0, true);
+  }
+
+  SPDLOG_INFO("Finished calibration:");
+  log_vector(motors_to_calibrate);
+
+  SPDLOG_INFO("Calibration status:");
+  log_vector(calibrated_motors_);
+}
+
+template <int N>
+void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop,
+                                          const CalibrationParams &params) {
+  SPDLOG_INFO("--------------- Starting full-robot calibration ---------------");
+  is_robot_calibrated_ = false;
+
+  // Construct a vector from 0 to N-1
+  std::vector<int> motor_indices(N);
+  std::iota(std::begin(motor_indices), std::end(motor_indices), 0);
+
+  // Calibrate all motors simultaneously
+  calibrate_motors(should_stop, motor_indices, params);
 
   is_robot_calibrated_ = true;
-
-  // Reset PID gains
-  motor_interface_->write_pid_ram_to_all(0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
-                                         MotorInterface::kDefaultIqKi);
-  std::this_thread::sleep_for(1ms);
-
-  // Set motors to zero velocity
-  velocity_control(ActuatorVector::Zero(), true);
-  std::this_thread::sleep_for(1ms);
-
-  SPDLOG_INFO("Finished calibration");
+  SPDLOG_INFO("Finished full-robot calibration");
 }
 
 template <int N>
 float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, int motor_index,
-                                          float calibration_velocity, float calibration_speed_kp,
-                                          float speed_threshold, float current_threshold,
-                                          int calibration_threshold, int start_averaging_ticks,
-                                          int averaging_ticks,
-                                          std::chrono::microseconds sleep_time) {
+                                          const CalibrationParams &params) {
   using namespace std::chrono_literals;
 
   int loops_at_endstop = 0;
-  float command_velocity = 0.0;
+  float command_velocity = params.calibration_speed * calibration_directions_(motor_index);
   float measured_endstop_position = 0.0;
-  command_velocity = calibration_velocity;
+  int averaging_ticks = params.calibration_threshold - params.start_averaging_ticks;
 
   MotorID motor_id = motor_interface_->actuator_config(motor_index);  // 0-indexed
-  motor_interface_->write_pid_ram(motor_id, 0, 0, calibration_speed_kp, 0,
+  motor_interface_->write_pid_ram(motor_id, 0, 0, params.calibration_speed_kp, 0,
                                   MotorInterface::kDefaultIqKp, MotorInterface::kDefaultIqKi);
   std::this_thread::sleep_for(1ms);
 
-  while (loops_at_endstop < calibration_threshold) {
+  while (true) {
     if (should_stop) {
       SPDLOG_WARN("-- Stopping calibration prematurely --");
-      break;
+      return 0.0;
     }
 
     // Command motor
@@ -294,20 +322,27 @@ float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, i
     float current = motor_data.current;
 
     // Check if at endstop
-    if ((std::abs(output_rad_per_sec) < speed_threshold) &&
-        (std::abs(current) > current_threshold)) {
+    if ((std::abs(output_rad_per_sec) < params.speed_threshold) &&
+        (std::abs(current) > params.current_threshold)) {
       loops_at_endstop += 1;
     }
 
     // Check if the number of ticks at the endstop has been reached
-    if (loops_at_endstop >= calibration_threshold) {
+    if (loops_at_endstop >= params.calibration_threshold) {
       command_velocity = 0.0;
       if (print_position_debug_) {
         SPDLOG_INFO("Motor {} done.", motor_index);
       }
+
+      // Reset PID gains
+      motor_interface_->write_pid_ram(motor_id, 0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
+                                      MotorInterface::kDefaultIqKi);
+
+      // Return the average position at the endstop
+      return measured_endstop_position;
     }
     // Start averaging position at endstop after a few ticks at the endstop
-    else if (loops_at_endstop >= start_averaging_ticks) {
+    else if (loops_at_endstop >= params.start_averaging_ticks) {
       measured_endstop_position += output_rads / averaging_ticks;
     }
 
@@ -322,9 +357,10 @@ float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, i
     if (print_sent_received_) {
       print_sent_received_debug(*motor_interface_);
     }
-    std::this_thread::sleep_for(sleep_time);
+
+    // Sleep for a bit
+    std::this_thread::sleep_for(params.sleep_time);
   }
-  return measured_endstop_position;
 }
 
 template <int N>

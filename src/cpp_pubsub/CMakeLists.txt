@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(cpp_pubsub)
 
-# Default to C++14
+# Default to C++20
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -37,6 +37,9 @@ add_executable(serial_test_syscall src/serial_test_syscall.cc)
 add_executable(motor_controller_generic_calibration_test src/motor_controller_generic_calibration_test.cpp)
 target_link_libraries(motor_controller_generic_calibration_test pupperv3 gflags)
 
+add_executable(motor_controller_generic_calibration_sequence_test src/motor_controller_generic_calibration_sequence_test.cpp)
+target_link_libraries(motor_controller_generic_calibration_sequence_test pupperv3 gflags)
+
 # Must update for generic interface
 # add_executable(talker src/joint_state_publisher.cpp)
 # target_link_libraries(talker motor_interface)
@@ -58,6 +61,7 @@ install(TARGETS motor_controller_generic_node_test DESTINATION lib/${PROJECT_NAM
 install(TARGETS test_rig DESTINATION lib/${PROJECT_NAME})
 install(TARGETS interface_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS motor_controller_generic_calibration_test DESTINATION lib/${PROJECT_NAME})
+install(TARGETS motor_controller_generic_calibration_sequence_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS latency_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS serial_test DESTINATION lib/${PROJECT_NAME})
 install(TARGETS serial_test_syscall DESTINATION lib/${PROJECT_NAME})

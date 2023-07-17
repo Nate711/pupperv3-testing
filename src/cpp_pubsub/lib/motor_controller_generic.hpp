@@ -8,6 +8,8 @@
 #include <vector>
 #include "motor_interface_generic.hpp"
 
+using namespace std::chrono_literals;
+
 namespace pupperv3 {
 
 template <class T>
@@ -69,25 +71,41 @@ class MotorController {
 
   bool is_calibrated();
 
-  /**
-   * @brief Calibrates all motors one by one.
-   *
-   * This function calibrates all the motors one by one. Each motor is calibrated
-   * independently until it reaches the endstop position. The calibration process
-   * sets the desired velocity, monitors the motor's position and current, and stops
-   * when the motor reaches the endstop condition.
-   *
-   * @param should_stop A reference to an atomic boolean variable that indicates
-   *                    whether the calibration process should be stopped prematurely.
-   * @return void
-   */
+  struct CalibrationParams {
+    float calibration_speed;
+    float calibration_speed_kp;
+    float speed_threshold;
+    float current_threshold;
+    int calibration_threshold;
+    int start_averaging_ticks;
+    int averaging_ticks;
+    std::chrono::microseconds sleep_time;
+  };
+
+  /// @brief Calibrates the motors specified in motor_to_calibrate.
+  /// @param should_stop A reference to an atomic boolean variable that indicates whether the
+  /// calibration process should be stopped prematurely.
+  /// @param motor_to_calibrate A vector of motor indices to calibrate.
+  /// @param params Calibration params (see CalibrationParams)
+  void calibrate_motors(const std::atomic_bool &should_stop, std::vector<int> motor_to_calibrate,
+                        const CalibrationParams &params);
+
+  /// @brief Calibrates all motors one by one.
+  /// @param should_stop A reference to an atomic boolean variable that indicates whether the
+  /// calibration process should be stopped prematurely.
+  /// @param params Calibration params (see CalibrationParams)
+  void calibrate_motors(const std::atomic_bool &should_stop, const CalibrationParams &params);
+
   void calibrate_motors(const std::atomic_bool &should_stop);
 
+  /// @brief Calibrates a single motor.
+  /// @param should_stop A reference to an atomic boolean variable that indicates whether the
+  /// calibration process should be stopped prematurely.
+  /// @param motor_index The 0-based index of the motor to calibrate.
+  /// @param params Calibration params (see CalibrationParams)
+  /// @return The calibrated motor's position in degrees.
   float calibrate_motor(const std::atomic_bool &should_stop, int motor_index,
-                        float calibration_velocity, float calibration_speed_kp,
-                        float speed_threshold, float current_threshold, int calibration_threshold,
-                        int start_averaging_ticks, int averaging_ticks,
-                        std::chrono::microseconds sleep_time);
+                        const CalibrationParams &params);
 
   inline bool is_busy() { return busy_; }
 
@@ -98,6 +116,16 @@ class MotorController {
   inline ActuatorVectorI micros_since_last_read() const {
     return ActuatorVectorI(motor_interface_->micros_since_last_read().data());
   }
+
+  static constexpr CalibrationParams kDefaultCalibrationParams = {
+      .calibration_speed = 750,  // rotor deg/s
+      .calibration_speed_kp = 30,
+      .speed_threshold = 0.05,
+      .current_threshold = 4.0,
+      .calibration_threshold = 20,
+      .start_averaging_ticks = 10,
+      .sleep_time = 5000us  // 200hz calibration loop
+  };
 
  private:
   static float raw_to_calibrated(float val, float measured_endstop_position,
@@ -124,6 +152,7 @@ class MotorController {
   float max_speed_;
   ActuatorVector calibration_directions_;
   std::atomic<bool> is_robot_calibrated_;
+  std::vector<bool> calibrated_motors_;  // 0-indexed indices of calibrated motors
   ActuatorVector measured_endstop_positions_;
   ActuatorVector endstop_positions_;
 
