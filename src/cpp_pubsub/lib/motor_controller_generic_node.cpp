@@ -75,7 +75,12 @@ void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
   watchdog_timer_ =
       this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogWarningUS * 2.0).period(),
                               std::bind(&MotorControllerNode::watchdog_callback, this));
-  motor_controller_->calibrate_motors(stop_);
+  auto default_params = MotorController<K_SERVOS>::kDefaultCalibrationParams;
+
+  // Calibrate motors one at a time for now
+  for (size_t i = 0; i < K_SERVOS; i += 1) {
+    motor_controller_->calibrate_motors(stop_, {i}, default_params);
+  }
   motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, default_position_);
 }
 /*
@@ -136,20 +141,42 @@ void MotorControllerNode<K_SERVOS>::publish_callback() {
 
 template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::watchdog_callback() {
-  auto latency = motor_controller_->micros_since_last_read();
-  int max_latency = latency.maxCoeff();
-  int max_idx;
-  latency.maxCoeff(&max_idx);
+  auto sends = motor_controller_->send_counts();
+  auto receives = motor_controller_->receive_counts();
+  for (int i = 0; i < sends.size(); i++) {
+    if (sends(i) - receives(i) > kWatchdogDisparityWarning) {
+      SPDLOG_WARN("Watchdog WARNING: Motor {} send count {} > receive count {}", i, sends(i),
+                  receives(i));
+    }
+    if (sends(i) - receives(i) > kWatchdogDisparityError) {
+      SPDLOG_ERROR("Watchdog TRIGGER: Motor {} send count {} > receive count {}", i, sends(i),
+                   receives(i));
+      throw WatchdogTriggered("Watchdog triggered");
+    }
+  }
 
-  if (max_latency > kWatchDogWarningUS) {
-    SPDLOG_WARN("Watchdog WARNING: Latency on motor {}: {} us. Max allowed: {} us", max_idx,
-                max_latency, kWatchDogTimeoutUS);
-  }
-  if (max_latency > kWatchDogTimeoutUS) {
-    SPDLOG_ERROR("Watchdog TRIGGER: Latency on motor {}: {} us. Max allowed: {} us", max_idx,
-                 max_latency, kWatchDogTimeoutUS);
-    throw WatchdogTriggered("Watchdog triggered");
-  }
+  // Need to use sychronization on motors_to_watch_ and deal with
+  // times when motors are not being commanded so naturally no responses
+  // should be received
+  // auto latency = motor_controller_->micros_since_last_read();
+  // for (int i : motors_to_watch_) {
+  //   int latency_i;
+  //   {
+  //     std::lock_guard<std::mutex> lock(motors_to_watch_mutex_);
+  //     latency_i = latency(i);
+  //   }
+  //   if (latency_i > kWatchDogWarningUS) {
+  //     SPDLOG_WARN("Watchdog WARNING: Latency on motor {}: {} us. Max allowed: {} us", i,
+  //     latency_i,
+  //                 kWatchDogTimeoutUS);
+  //   }
+  //   if (latency_i > kWatchDogTimeoutUS) {
+  //     SPDLOG_ERROR("Watchdog TRIGGER: Latency on motor {}: {} us. Max allowed: {} us", i,
+  //     latency_i,
+  //                  kWatchDogTimeoutUS);
+  //     throw WatchdogTriggered("Watchdog triggered");
+  //   }
+  // }
 }
 
 template class MotorControllerNode<3>;

@@ -211,6 +211,7 @@ void MotorController<N>::velocity_control(const ActuatorVector &velocity_command
 
 template <int N>
 bool MotorController<N>::is_calibrated() {
+  // Is atomic so no need to lock
   return is_robot_calibrated_;
 }
 
@@ -240,11 +241,6 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop,
 
   using namespace std::chrono_literals;
 
-  is_robot_calibrated_ = false;
-  for (int i : motors_to_calibrate) {
-    calibrated_motors_.at(i) = false;
-  }
-
   // Spin off async tasks to calibrate motors
   std::vector<std::future<float>> measured_endstop_position_futures;
   for (int i : motors_to_calibrate) {
@@ -257,7 +253,6 @@ void MotorController<N>::calibrate_motors(const std::atomic_bool &should_stop,
   for (size_t i = 0; i < motors_to_calibrate.size(); i++) {
     int motor_index = motors_to_calibrate[i];
     measured_endstop_positions_(motor_index) = measured_endstop_position_futures[i].get();
-    calibrated_motors_.at(motor_index) = true;
   }
 
   // Command motors which were calibrated to zero speed
@@ -294,6 +289,14 @@ float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, i
                                           const CalibrationParams &params) {
   using namespace std::chrono_literals;
 
+  SPDLOG_INFO("Calibrating motor {}", motor_index);
+  is_robot_calibrated_ = false;
+
+  {
+    std::lock_guard<std::mutex> lock(calibrated_motors_mutex_);
+    calibrated_motors_.at(motor_index) = false;
+  }
+
   int loops_at_endstop = 0;
   float command_velocity = params.calibration_speed * calibration_directions_(motor_index);
   float measured_endstop_position = 0.0;
@@ -306,7 +309,7 @@ float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, i
 
   while (true) {
     if (should_stop) {
-      SPDLOG_WARN("-- Stopping calibration prematurely --");
+      SPDLOG_WARN("-- Stopping calibration of motor {} prematurely --", motor_index);
       return 0.0;
     }
 
@@ -337,6 +340,17 @@ float MotorController<N>::calibrate_motor(const std::atomic_bool &should_stop, i
       // Reset PID gains
       motor_interface_->write_pid_ram(motor_id, 0, 0, speed_kp_, 0, MotorInterface::kDefaultIqKp,
                                       MotorInterface::kDefaultIqKi);
+
+      // Mark motor as calibrated
+      // Mark robot as calibrated if all motors calibrated
+      {
+        std::lock_guard<std::mutex> lock(calibrated_motors_mutex_);
+        calibrated_motors_.at(motor_index) = true;
+        if (std::all_of(calibrated_motors_.begin(), calibrated_motors_.end(),
+                        [](bool v) { return v; })) {
+          is_robot_calibrated_ = true;
+        }
+      }
 
       // Return the average position at the endstop
       return measured_endstop_position;
@@ -379,12 +393,13 @@ void MotorController<N>::blocking_move(const std::atomic_bool &should_stop, floa
   // Need to wait 1ms here to prevent can bus from dying
   std::this_thread::sleep_for(1ms);
   for (int ticks = 0;; ticks++) {
-    position_control(goal_position, position_kp, max_speed, true);
-    std::this_thread::sleep_for(sleep_time);
     if (should_stop) {
       SPDLOG_WARN("-- Stopping blocking move prematurely --");
       break;
     }
+    position_control(goal_position, position_kp, max_speed, true);
+    std::this_thread::sleep_for(sleep_time);
+
     if ((actuator_velocities().template lpNorm<Eigen::Infinity>() < speed_tolerance) &&
         (ticks > wait_ticks)) {
       break;

@@ -78,7 +78,6 @@ class MotorController {
     float current_threshold;
     int calibration_threshold;
     int start_averaging_ticks;
-    int averaging_ticks;
     std::chrono::microseconds sleep_time;
   };
 
@@ -117,6 +116,14 @@ class MotorController {
     return ActuatorVectorI(motor_interface_->micros_since_last_read().data());
   }
 
+  inline ActuatorVectorI receive_counts() const {
+    return ActuatorVectorI(motor_interface_->receive_counts().data());
+  }
+
+  inline ActuatorVectorI send_counts() const {
+    return ActuatorVectorI(motor_interface_->send_counts().data());
+  }
+
   static constexpr CalibrationParams kDefaultCalibrationParams = {
       .calibration_speed = 750,  // rotor deg/s
       .calibration_speed_kp = 30,
@@ -152,6 +159,7 @@ class MotorController {
   float max_speed_;
   ActuatorVector calibration_directions_;
   std::atomic<bool> is_robot_calibrated_;
+  std::mutex calibrated_motors_mutex_;
   std::vector<bool> calibrated_motors_;  // 0-indexed indices of calibrated motors
   ActuatorVector measured_endstop_positions_;
   ActuatorVector endstop_positions_;
