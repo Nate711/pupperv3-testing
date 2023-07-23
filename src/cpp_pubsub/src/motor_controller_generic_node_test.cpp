@@ -4,8 +4,14 @@
 #include <memory>
 #include <string>
 
+#include <gflags/gflags.h>
 #include <rclcpp/rclcpp.hpp>
 #include "motor_controller_generic_node.hpp"
+
+DEFINE_double(rate, 200.0, "Rate at which to command motors and publish joint state");
+DEFINE_bool(verbose, false, "True to print debug info like micros since last receive");
+DEFINE_bool(very_verbose, false,
+            "True to print debug info like position control info and sent received info");
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include <spdlog/spdlog.h>
@@ -14,11 +20,12 @@ constexpr int K_SERVOS = 12;
 int main(int argc, char* argv[]) {
   spdlog::set_pattern("[%H:%M:%S.%e] [%^%7l%$] [%45s:%#] %^%v%$");
   rclcpp::init(argc, argv);
-  float publish_rate = 200;
-  if (argc > 1) {
-    publish_rate = std::stof(argv[1]);
-  }
-  SPDLOG_INFO("Joint state publish_rate: {}", publish_rate);
+
+  // Parse the command-line arguments using gflags
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+  // Print loop rate
+  SPDLOG_INFO("Joint state publish_rate: {}", FLAGS_rate);
 
   // Create config
   pupperv3::MotorID id1{pupperv3::CANChannel::CAN0, 1};
@@ -36,7 +43,7 @@ int main(int argc, char* argv[]) {
   pupperv3::ActuatorConfiguration actuator_config{
       {id1, id2, id3, id4, id5, id6, id7, id8, id9, id10, id11, id12}};
 
-  auto interface = std::make_unique<pupperv3::MotorInterface>(actuator_config, true);
+  auto interface = std::make_unique<pupperv3::MotorInterface>(actuator_config, false);
 
   // 20000 was on the brink of being too stiff
   // 10000 was on the soft side and robot would fall backwards often
@@ -57,9 +64,9 @@ int main(int argc, char* argv[]) {
 
   auto controller = std::make_unique<pupperv3::MotorController<K_SERVOS>>(
       position_kp, speed_kp, max_speed, endstop_positions_degs, calibration_directions,
-      std::move(interface));
+      std::move(interface), FLAGS_verbose, FLAGS_very_verbose);
   auto node = std::make_shared<pupperv3::MotorControllerNode<K_SERVOS>>(
-      publish_rate, std::move(controller), joint_names, default_position);
+      publish_rate, std::move(controller), joint_names, default_position, FLAGS_verbose, FLAGS_very_verbose);
 
   node->startup();
   // TODO: don't start watchdog until position control is going!
