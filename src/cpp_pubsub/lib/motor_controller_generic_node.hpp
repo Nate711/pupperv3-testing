@@ -68,8 +68,8 @@ class MotorControllerNode : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
   static constexpr int kWatchDogWarningUS = 10000;  // watchdog should be run twice as frequent
   static constexpr int kWatchDogTimeoutUS = 50000;
-  static constexpr int kWatchdogDisparityWarning = 5;
-  static constexpr int kWatchdogDisparityError = 10;
+  static constexpr int kWatchdogDisparityWarning = 10;
+  static constexpr int kWatchdogDisparityError = 50;
 
   float publish_rate_;
   std::unique_ptr<MotorController<K_SERVOS>> motor_controller_;
