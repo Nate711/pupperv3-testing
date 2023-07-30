@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
       position_kp, speed_kp, max_speed, endstop_positions_degs, calibration_directions,
       std::move(interface), FLAGS_verbose, FLAGS_very_verbose);
   auto node = std::make_shared<pupperv3::MotorControllerNode<K_SERVOS>>(
-      publish_rate, std::move(controller), joint_names, default_position, FLAGS_verbose, FLAGS_very_verbose);
+      FLAGS_rate, std::move(controller), joint_names, default_position, FLAGS_verbose, FLAGS_very_verbose);
 
   node->startup();
   // TODO: don't start watchdog until position control is going!
