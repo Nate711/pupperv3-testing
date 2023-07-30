@@ -78,8 +78,15 @@ void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
   auto default_params = MotorController<K_SERVOS>::kDefaultCalibrationParams;
 
   // Calibrate motors one at a time for now
-  for (size_t i = 0; i < K_SERVOS; i += 1) {
-    motor_controller_->calibrate_motors(stop_, {i}, default_params);
+  if(K_SERVOS == 12) {
+    motor_controller_->calibrate_motors(stop_, {2,5,8,11}, default_params);
+    motor_controller_->calibrate_motors(stop_, {1,4,7,10}, default_params);
+    motor_controller_->calibrate_motors(stop_, {0,3,6,9}, default_params);
+  }
+  else {
+    for (size_t i = 0; i < K_SERVOS; i += 1) {
+        motor_controller_->calibrate_motors(stop_, {i}, default_params);
+    }
   }
   motor_controller_->blocking_move(stop_, 750.0, 20000.0, 15, default_position_);
 }
