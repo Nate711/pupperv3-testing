@@ -39,6 +39,17 @@ MotorInterface::MotorInterface(ActuatorConfiguration actuator_config, bool verbo
 
 MotorInterface::~MotorInterface() {
   SPDLOG_INFO("Destroying motor interface...");
+
+  SPDLOG_INFO("Soft stopping motors...");
+  using namespace std::chrono_literals;
+  for (const auto &motor_id : actuator_config_) {
+    float speed_kp = 5.0;
+    write_pid_ram(motor_id, 0, 0, speed_kp, 0, MotorInterface::kDefaultIqKp,
+                                         MotorInterface::kDefaultIqKi);
+    command_velocity(motor_id, 0.0);
+  }
+  std::this_thread::sleep_for(500ms);
+
   SPDLOG_INFO("Stopping all motors.");
   command_all_stop();
 
