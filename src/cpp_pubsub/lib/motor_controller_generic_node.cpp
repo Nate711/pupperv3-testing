@@ -73,7 +73,7 @@ template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::startup_thread_fn() {
   // Start watchdog with period 0.5x max timeout
   watchdog_timer_ =
-      this->create_wall_timer(rclcpp::WallRate(1e6 / kWatchDogWarningUS * 2.0).period(),
+      this->create_wall_timer(rclcpp::WallRate(kWatchDogRate).period(),
                               std::bind(&MotorControllerNode::watchdog_callback, this));
   auto default_params = MotorController<K_SERVOS>::kDefaultCalibrationParams;
 
@@ -150,17 +150,24 @@ template <int K_SERVOS>
 void MotorControllerNode<K_SERVOS>::watchdog_callback() {
   auto sends = motor_controller_->send_counts();
   auto receives = motor_controller_->receive_counts();
-  for (int i = 0; i < sends.size(); i++) {
-    if (sends(i) - receives(i) > kWatchdogDisparityWarning) {
-      SPDLOG_WARN("Watchdog WARNING: Motor {} send count {} > receive count {}", i, sends(i),
+
+  auto missed_replies = sends - receives;
+  auto new_missed_replies = missed_replies - previous_missed_replies;
+  
+  SPDLOG_INFO("Missed replies: {}", missed_replies);
+
+  for (int i = 0; i < missed_replies.size(); i++) {
+    if (new_missed_replies(i) > kNewMissedRepliesWarning) {
+      SPDLOG_WARN("Watchdog WARNING: Motor {} new missed replies: {} previous missed replies: {} send count: {} > receive count: {}", i, new_missed_replies(i), previous_missed_replies(i), sends(i),
                   receives(i));
     }
-    if (sends(i) - receives(i) > kWatchdogDisparityError) {
-      SPDLOG_ERROR("Watchdog TRIGGER: Motor {} send count {} > receive count {}", i, sends(i),
-                   receives(i));
+    if (new_missed_replies(i) > kNewMissedRepliesError) {
+      SPDLOG_WARN("Watchdog ERROR: Motor {} new missed replies: {} previous missed replies: {} send count: {} > receive count: {}", i, new_missed_replies(i), previous_missed_replies(i), sends(i),
+                  receives(i));
       throw WatchdogTriggered("Watchdog triggered");
     }
   }
+  previous_missed_replies = missed_replies;
 
   // Need to use sychronization on motors_to_watch_ and deal with
   // times when motors are not being commanded so naturally no responses

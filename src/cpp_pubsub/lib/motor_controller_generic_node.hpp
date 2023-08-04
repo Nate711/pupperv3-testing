@@ -66,10 +66,10 @@ class MotorControllerNode : public rclcpp::Node {
   void joint_command_callback(pupper_interfaces::msg::JointCommand joint_command);
 
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
-  static constexpr int kWatchDogWarningUS = 10000;  // watchdog should be run twice as frequent
-  static constexpr int kWatchDogTimeoutUS = 50000;
-  static constexpr int kWatchdogDisparityWarning = 10;
-  static constexpr int kWatchdogDisparityError = 50;
+  static constexpr int kWatchDogRate = 10; // Hz
+  static constexpr int kNewMissedRepliesWarning = 5; // For a rate of 10hz, 5 corresponds to 50/sec
+  static constexpr int kNewMissedRepliesError = 10; // For a rate of 10Hz, 10 corresponds to 100/sec
+  MotorController<K_SERVOS>::ActuatorVectorI previous_missed_replies;
 
   float publish_rate_;
   std::unique_ptr<MotorController<K_SERVOS>> motor_controller_;
