@@ -51,8 +51,8 @@ int main(int argc, char* argv[]) {
   uint8_t speed_kp = 8;         // 5 is good default. units A/rotor deg/s
   float max_speed = 5000;       // rotor deg/s
   using ActuatorVector = pupperv3::MotorController<K_SERVOS>::ActuatorVector;
-  ActuatorVector endstop_positions_degs = {-135, 90, 68, 135, -90, -68,
-                                           -135, 90, 68, 135, -90, -68};
+  ActuatorVector endstop_positions_degs = {-80, 43, (94-30), 80, -43, -(94-30),
+                                           -80, 43, (94-30), 80, -43, -(94-30)};
   ActuatorVector calibration_directions = {-1, 1, 1, 1, -1, -1, -1, 1, 1, 1, -1, -1};
 
   std::array<std::string, K_SERVOS> joint_names = {
