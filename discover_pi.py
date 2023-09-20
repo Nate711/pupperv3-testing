@@ -16,6 +16,7 @@ def check_ip(ip):
 
         # If the connection succeeds, it means the IP is reachable
         print(f"IP Address found: {ip}")
+        print(f"Connect with: ssh -A ubuntu@{ip}")
         return ip
     except:
         return None
